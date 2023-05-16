@@ -6,6 +6,9 @@
 #include "backends/imgui_impl_opengl3.h"
 
 #include <iostream>
+#include <string>
+#include <vector>
+#include <random>
 
 static void glfw_error_callback(int error, const char *description) {
   fprintf(stderr, "GLFW Error %d: %s\n", error, description);
@@ -17,21 +20,97 @@ void new_frames() {
   ImGui::NewFrame();
 }
 
-void my_window() {
+
+struct Point {
+  int x, y, z;
+  // Overload the << operator for Person struct
+  friend std::ostream& operator<<(std::ostream& os, const Point& p) {
+    os << "{ x: " << p.x << ", y: " << p.y << ", z: " << p.z << " }";
+    return os;
+  }
+};
+
+typedef struct Mesh {
+  const char * string;
+  std::vector<Point*> points;
+
+  friend std::ostream& operator<<(std::ostream& os, const Mesh& m) {
+    os << "{ name: " << m.string << ", \n";
+    for (const auto& point : m.points) {
+        os << "point: " << *point << ",\n";
+    }
+    os << "}\n";
+    return os;
+  }
+} Mesh;
+
+
+Mesh * create_random_mesh(const char * s, int nb_points) {
+  Mesh * m = new Mesh;
+  m->string = s;
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  // Define the range of random numbers
+  std::uniform_int_distribution<int> distribution(1, 100);
+  // Generate a random number
+  int randomNum = distribution(gen);
+  for (int i = 0; i < nb_points; i++) {
+    Point * p = new Point;
+    p->x = distribution(gen);
+    p->y = distribution(gen);
+    p->z = distribution(gen);
+    (m->points).push_back(p);
+  }
+  return m;
+};
+
+void my_window(Mesh** meshes, int len) {
   // fix window to left corner
   float size_y = ImGui::GetIO().DisplaySize.y;
   ImGui::SetNextWindowPos(ImVec2(0, 0)); // left corner
   ImGui::SetNextWindowSize(ImVec2(300, size_y));
   // std::cout << ImGui::GetIO().DisplaySize.x << " " << ImGui::GetIO().DisplaySize.y << "\n";
   // bool open = true;
-  ImGui::Begin("MyWindow", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
-  ImGui::Text("Hello, world %d", 123);
+  int flags = 0;
+  flags |= ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove;
+  flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar;
+  // REVIEW: Title Bar????
+  ImGui::Begin("MyWindow", nullptr, flags);
+
+  // ImGui::Text("Hello, world %d", 123);
+  if (ImGui::TreeNode("test")) {
+      ImGui::Text("heeeellllo");
+      ImGui::TreePop();
+  }
+  for (int i = 0; i < len; i++) {
+    Mesh * m = meshes[i];
+    if (ImGui::TreeNode(meshes[i], "Mesh")) {
+      // for each point create sub node
+      for (const auto& point : m->points) {
+        if (ImGui::TreeNode(point, "point")) {
+          ImGui::Text("{ x: %d, y: %d, z: %d }",
+                      point->x, point->y, point->z);
+          ImGui::TreePop();
+        }
+      }
+      ImGui::TreePop();
+    }
+
+  }
+
   // std::cout << open << "\n";
   ImGui::End();
 }
-
 // Main code
 int main(int, char **) {
+  // create some random meshes
+  Mesh* meshes[10];
+  for (int i = 0; i < 10; i++) {
+    meshes[i] = create_random_mesh("Mesh", 5);
+  }
+  // int n= 5;
+  // std::cout << "Mesh" + std::string(n) ;
+
   glfwSetErrorCallback(glfw_error_callback);
   if (!glfwInit())
     return 1;
@@ -55,8 +134,8 @@ int main(int, char **) {
     new_frames();
 
     // Create your ImGui UI here
-    my_window();
-    // ImGui::ShowDemoWindow();
+    my_window(meshes, 10);
+    ImGui::ShowDemoWindow();
 
     // Rendering
     ImGui::Render();
