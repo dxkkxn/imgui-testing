@@ -5,18 +5,29 @@
 #include "backends/imgui_impl_opengl3.h"
 #include "backends/imgui_impl_opengl3.h"
 
+#include <iostream>
+
 static void glfw_error_callback(int error, const char *description) {
   fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
-void newFrames() {
+void new_frames() {
   ImGui_ImplOpenGL3_NewFrame();
   ImGui_ImplGlfw_NewFrame();
   ImGui::NewFrame();
 }
 
-void gui() {
+void my_window() {
+  // fix window to left corner
+  float size_y = ImGui::GetIO().DisplaySize.y;
+  ImGui::SetNextWindowPos(ImVec2(0, 0)); // left corner
+  ImGui::SetNextWindowSize(ImVec2(300, size_y));
+  // std::cout << ImGui::GetIO().DisplaySize.x << " " << ImGui::GetIO().DisplaySize.y << "\n";
+  // bool open = true;
+  ImGui::Begin("MyWindow", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize);
   ImGui::Text("Hello, world %d", 123);
+  // std::cout << open << "\n";
+  ImGui::End();
 }
 
 // Main code
@@ -41,10 +52,11 @@ int main(int, char **) {
     glfwPollEvents();
 
     // Start a new ImGui frame
-    newFrames();
+    new_frames();
 
     // Create your ImGui UI here
-    gui();
+    my_window();
+    // ImGui::ShowDemoWindow();
 
     // Rendering
     ImGui::Render();
