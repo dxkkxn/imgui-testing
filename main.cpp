@@ -32,12 +32,12 @@ struct Point {
 
 typedef struct Mesh {
   const char * string;
-  std::vector<Point*> points;
+  std::vector<Point> points;
 
   friend std::ostream& operator<<(std::ostream& os, const Mesh& m) {
     os << "{ name: " << m.string << ", \n";
     for (const auto& point : m.points) {
-        os << "point: " << *point << ",\n";
+        os << "point: " << point << ",\n";
     }
     os << "}\n";
     return os;
@@ -53,13 +53,13 @@ Mesh * create_random_mesh(const char * s, int nb_points) {
   // Define the range of random numbers
   std::uniform_int_distribution<int> distribution(1, 100);
   // Generate a random number
-  int randomNum = distribution(gen);
+  // int randomNum = distribution(gen);
+  Point p;
   for (int i = 0; i < nb_points; i++) {
-    Point * p = new Point;
-    p->x = distribution(gen);
-    p->y = distribution(gen);
-    p->z = distribution(gen);
-    (m->points).push_back(p);
+    p.x = distribution(gen);
+    p.y = distribution(gen);
+    p.z = distribution(gen);
+    (m->points).emplace_back(p);
   }
   return m;
 };
@@ -74,7 +74,6 @@ void my_window(Mesh** meshes, int len) {
   int flags = 0;
   flags |= ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove;
   flags |= ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoTitleBar;
-  // REVIEW: Title Bar????
   ImGui::Begin("MyWindow", nullptr, flags);
 
   // ImGui::Text("Hello, world %d", 123);
@@ -82,20 +81,45 @@ void my_window(Mesh** meshes, int len) {
       ImGui::Text("heeeellllo");
       ImGui::TreePop();
   }
+  ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
+  static int selection_mask = 0; //(1 << 2);
+  int node_clicked = -1;
+
+
   for (int i = 0; i < len; i++) {
     Mesh * m = meshes[i];
-    if (ImGui::TreeNode(meshes[i], "Mesh")) {
+    ImGuiTreeNodeFlags node_flags = base_flags;
+    const bool is_selected = (selection_mask & (1 << i)) != 0;
+    if (is_selected)
+        node_flags |= ImGuiTreeNodeFlags_Selected;
+    bool node_open = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Node %d", i);
+    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+        node_clicked = i;
+    if (node_open) {
+        // ImGui::CheckboxFlags("ImGuiTreeNodeFlags_OpenOnArrow",       &base_flags, ImGuiTreeNodeFlags_OpenOnArrow);
+        // ImGui::CheckboxFlags("ImGuiTreeNodeFlags_OpenOnDoubleClick", &base_flags, ImGuiTreeNodeFlags_OpenOnDoubleClick);
+        // ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanAvailWidth",    &base_flags, ImGuiTreeNodeFlags_SpanAvailWidth); ImGui::SameLine(); HelpMarker("Extend hit area to all available width instead of allowing more items to be laid out after the node.");
+        // ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanFullWidth",     &base_flags, ImGuiTreeNodeFlags_SpanFullWidth);
       // for each point create sub node
       for (const auto& point : m->points) {
-        if (ImGui::TreeNode(point, "point")) {
+        if (ImGui::TreeNode(&point, "point")) {
           ImGui::Text("{ x: %d, y: %d, z: %d }",
-                      point->x, point->y, point->z);
+                      point.x, point.y, point.z);
           ImGui::TreePop();
         }
       }
       ImGui::TreePop();
     }
 
+  }
+  if (node_clicked != -1)
+  {
+      // Update selection state
+      // (process outside of tree loop to avoid visual inconsistencies during the clicking frame)
+      // if (ImGui::GetIO().KeyCtrl)
+      //     selection_mask ^= (1 << node_clicked);          // CTRL+click to toggle
+      // else //if (!(selection_mask & (1 << node_clicked))) // Depending on selection behavior you want, may want to preserve selection when clicking on item that is part of the selection
+          selection_mask = (1 << node_clicked);           // Click to single-select
   }
 
   // std::cout << open << "\n";
