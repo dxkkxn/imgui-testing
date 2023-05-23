@@ -10,6 +10,7 @@
 #include <random>
 #include <string>
 #include <vector>
+#include "icons.h"
 
 #define WINDOW_SIZE 300
 
@@ -100,7 +101,7 @@ void my_window(Mesh **meshes, int len) {
   ImGui::Begin("MyWindow", nullptr, flags);
 
   // ImGui::Text("Hello, world %d", 123);
-  if (ImGui::TreeNode("test")) {
+  if (ImGui::TreeNode(ICON_FA_GEAR" test")) {
     ImGui::Text("heeeellllo");
     ImGui::TreePop();
   }
@@ -117,7 +118,7 @@ void my_window(Mesh **meshes, int len) {
     if (is_selected)
       node_flags |= ImGuiTreeNodeFlags_Selected;
     bool node_open =
-        ImGui::TreeNodeEx((void *)(intptr_t)i, node_flags, "Mesh %d", i);
+        ImGui::TreeNodeEx((void *)(intptr_t)i, node_flags, ICON_FA_FUTBOL " Mesh %d", i);
     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
       node_clicked = i;
     if (node_open) {
@@ -312,6 +313,23 @@ int main(int, char **) {
   ImGui::CreateContext();
   ImPlot::CreateContext();
   ImGui::StyleColorsDark();
+  // Merge icons into default tool font
+  ImGuiIO &io = ImGui::GetIO();
+  io.Fonts->AddFontDefault();
+
+  ImFontConfig config;
+  config.MergeMode = true;
+  config.GlyphMinAdvanceX =
+      13.0f; // Use if you want to make the icon monospaced
+  static const ImWchar icon_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
+  // io.Fonts->AddFontFromFileTTF("fa-regular-400.ttf", 13.0f, &config, icon_ranges);
+  io.Fonts->AddFontFromFileTTF("fa-solid-900.ttf", 13.0f, &config, icon_ranges);
+  // Example of loading an icon font
+  // ImGuiIO& io = ImGui::GetIO();
+  // io.Fonts->AddFontFromFileTTF("fa-solid-900.ttf", 13);
+  // io.Fonts->AddFontFromFileTTF("./imgui/misc/fonts/Roboto-Medium.ttf", 13);
+  // io.Fonts->Build();
+
   // ImGuiIO &io = ImGui::GetIO();
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init();
