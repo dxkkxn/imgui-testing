@@ -5,7 +5,8 @@
 # @version 0.1
 
 IMGUI_DIR = ./imgui
-CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
+IMPLOT_DIR = ./implot
+CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(IMPLOT_DIR)
 CXXFLAGS += -g -Wall -Wformat
 
 # main: main.cpp
@@ -23,6 +24,8 @@ CXXFLAGS += -g -Wall -Wformat
 SOURCES = main.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
+# adding implot to sources
+SOURCES += $(IMPLOT_DIR)/implot.cpp $(IMPLOT_DIR)/implot_demo.cpp $(IMPLOT_DIR)/implot_items.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 
 ECHO_MESSAGE = "Linux"
@@ -36,6 +39,9 @@ CFLAGS = $(CXXFLAGS)
 	g++ $(CXXFLAGS) -c -o $@ $<
 
 %.o:$(IMGUI_DIR)/%.cpp
+	g++ $(CXXFLAGS) -c -o $@ $<
+
+%.o:$(IMPLOT_DIR)/%.cpp
 	g++ $(CXXFLAGS) -c -o $@ $<
 
 # %.o: $(IMGUI_DIR)/backends/imgui_imp_glfw.cpp $(IMGUI_DIR)/backends/imgui_imp_opengl3.cpp
