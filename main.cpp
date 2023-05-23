@@ -1,13 +1,17 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 #include "imgui.h"
+#include "implot.h"
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 #include <cstdio>
 
+#include <cstring>
 #include <iostream>
 #include <random>
 #include <string>
 #include <vector>
+
+#define WINDOW_SIZE 300
 
 static void glfw_error_callback(int error, const char *description) {
   fprintf(stderr, "GLFW Error %d: %s\n", error, description);
@@ -61,17 +65,33 @@ Mesh *create_random_mesh(const char *s, int nb_points) {
   return m;
 };
 
+float random_points[1001];
+
+void fill_random_points_arr() {
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  // Define the range of random numbers
+  std::uniform_real_distribution<float> distribution(1, 100);
+  for (int i = 0; i < 1001; i++) {
+    random_points[i] = distribution(gen);
+  }
+}
+
 // void inspector_window
 
+
+float vg(void * data, int idx) {
+  float * fdata = (float*)data;
+  return sinf(idx + (float)ImGui::GetTime());
+}
 
 void my_window(Mesh **meshes, int len) {
   // fix window to left corner
   static bool object_inspector_active = false;
   float size_y = ImGui::GetIO().DisplaySize.y;
   if (object_inspector_active) size_y = size_y/2;
-  std::cout << size_y << std::endl;
   ImGui::SetNextWindowPos(ImVec2(0, 0)); // left corner
-  ImGui::SetNextWindowSize(ImVec2(300, size_y));
+  ImGui::SetNextWindowSize(ImVec2(WINDOW_SIZE, size_y));
   // std::cout << ImGui::GetIO().DisplaySize.x << " " <<
   // ImGui::GetIO().DisplaySize.y << "\n"; bool open = true;
   int flags = 0;
@@ -103,25 +123,67 @@ void my_window(Mesh **meshes, int len) {
     if (node_open) {
       object_inspector_active = true;
       ImGui::SetNextWindowPos(ImVec2(0, size_y));
-      ImGui::SetNextWindowSize(ImVec2(300, size_y));
+      ImGui::SetNextWindowSize(ImVec2(WINDOW_SIZE, size_y));
       if (ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
         // if (ImGui::BeginTable("table1", 3))
-        int j = 0;
-        for (const auto &point : m->points) {
-          // if (ImGui::TreeNode(&point, "point")) {
-          //   ImGui::Text("{ x: %d, y: %d, z: %d }", point.x, point.y, point.z);
-          //   ImGui::TreePop();
-          // }
-          // if (ImGui::TreeNode(&point, "point")) {
-            // static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+        ImGuiTableFlags flags = ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+        if (ImGui::BeginTable("table1", 3, flags)) {
+          ImGui::TableSetupColumn("x", ImGuiTableColumnFlags_WidthFixed);
+          ImGui::TableSetupColumn("y", ImGuiTableColumnFlags_WidthFixed);
+          ImGui::TableSetupColumn("z", ImGuiTableColumnFlags_WidthStretch);
+          ImGui::TableHeadersRow();
+          int j = 0;
+          for (const auto &point : m->points) {
+            // if (ImGui::TreeNode(&point, "point")) {
+            //   ImGui::Text("{ x: %d, y: %d, z: %d }", point.x, point.y, point.z);
+            //   ImGui::TreePop();
+            // }
+            // if (ImGui::TreeNode(&point, "point")) {
+              // static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+              // char label[64];
+              // sprintf(label, "##point: %d", j);// static int vec3i[3] = { 10, 20, 30 };
+              ImGui::TableNextRow();
+              ImGui::TableNextColumn();
+              ImGui::Text("%.3f", point.x);
+              ImGui::TableNextColumn();
+              ImGui::Text("%.3f", point.y);
+              ImGui::TableNextColumn();
+              ImGui::Text("%.3f", point.z);
+              // ImGui::InputScalarN(label, ImGuiDataType_Float, (void *)&point, 3, NULL, NULL, NULL, ImGuiInputTextFlags_ReadOnly);
+                // ImGui::TableNextColumn();
+                // ImGui::TableNextColumn();
+              // ImGui::Text("{ x: %d, y: %d, z: %d }", point.x, point.y, point.z);
+              // ImGui::TreePop();
+            // }
+            j++;
+          }
+
+          for (const auto &point : m->points) {
             char label[64];
             sprintf(label, "##point: %d", j);// static int vec3i[3] = { 10, 20, 30 };
-            ImGui::InputScalarN(label, ImGuiDataType_Float, (void *)&point, 3, NULL, NULL, NULL, ImGuiInputTextFlags_ReadOnly);
-            // ImGui::Text("{ x: %d, y: %d, z: %d }", point.x, point.y, point.z);
-            // ImGui::TreePop();
-          // }
-          j++;
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::InputFloat(label, (float *)&(point.x));
+            ImGui::TableNextColumn();
+            ImGui::InputFloat(label, (float *)&(point.y));
+            ImGui::TableNextColumn();
+            ImGui::InputFloat(label, (float *)&(point.z));
+          }
+          ImGui::EndTable();
         }
+
+        static bool check = true;
+        ImGui::Checkbox("checkbox", &check);
+
+        static int e = 0;
+        ImGui::RadioButton("Apple", &e, 0); ImGui::SameLine();
+        ImGui::RadioButton("Banana", &e, 1); ImGui::SameLine();
+        ImGui::RadioButton("Cherry", &e, 2);
+
+        const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
+        static int item_current = 1;
+        ImGui::ListBox("##listbox", &item_current, items, IM_ARRAYSIZE(items), 4);
+        std::cout << items[item_current] << std::endl;
         ImGui::End();
       }
     }
@@ -162,7 +224,69 @@ void my_window(Mesh **meshes, int len) {
 
   // std::cout << open << "\n";
   ImGui::End();
+
+  // bottom window
+
+  size_y = ImGui::GetIO().DisplaySize.y;
+  float size_x = ImGui::GetIO().DisplaySize.x;
+  ImGui::SetNextWindowPos(ImVec2(WINDOW_SIZE, size_y - WINDOW_SIZE)); // left corner
+  ImGui::SetNextWindowSize(ImVec2(size_x - WINDOW_SIZE, WINDOW_SIZE));
+  if (ImGui::Begin("bottom", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+
+    static float xs1[1001], ys1[1001];
+    static float g[1001];
+    for (int i = 0; i < 1001; ++i) {
+        xs1[i] = i * 0.01f;
+        ys1[i] = sinf(xs1[i] + (float)ImGui::GetTime());
+        g[i] = exp(-pow(fmod(xs1[i] + (float)ImGui::GetTime(), 10) - 4, 2));
+        // g[i] = exp(xs1[i]);
+        // std::cout << exp(i) << " " << i << std::endl;
+    }
+    memmove(random_points, random_points + 1, sizeof(int) * 1000);
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+      // Define the range of random numbers
+    std::uniform_real_distribution<float> distribution(1, 100);
+    random_points[1000] = distribution(gen);
+
+    ImGui::PlotLines("##teeest", ys1, IM_ARRAYSIZE(ys1), 0, "forces");
+    ImGui::SameLine();
+    ImGui::PlotLines("##values_getter_test", vg, xs1, IM_ARRAYSIZE(xs1), 0, "teeest");
+
+
+
+
+    if (ImPlot::BeginPlot("Force x", ImVec2(500, 200))) {
+        ImPlot::SetupAxes("time","force");
+        ImPlot::PlotLine("##f(x)", xs1, ys1, 1001);
+        ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle);
+        ImPlot::EndPlot();
+    }
+    ImGui::SameLine();
+
+    if (ImPlot::BeginPlot("Force y", ImVec2(500, 200))) {
+
+        ImPlot::SetupAxes("x","y");
+
+        // ImPlot::PlotLineG("##f(x)", ImPlotGetter getter, void* data, int count, ImPlotLineFlags flags=0);
+        ImPlot::PlotLine("##f(x)", random_points, 1001);
+        ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle);
+        ImPlot::EndPlot();
+    }
+    ImGui::SameLine();
+    if (ImPlot::BeginPlot("Force z", ImVec2(500, 200))) {
+        ImPlot::SetupAxes("x","y");
+        ImPlot::PlotLine("##f(x)", xs1, g, 1001);
+        ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle);
+        ImPlot::EndPlot();
+    }
+
+    ImGui::End();
+  }
 }
+
+
 // Main code
 int main(int, char **) {
   // create some random meshes
@@ -170,6 +294,7 @@ int main(int, char **) {
   for (int i = 0; i < 10; i++) {
     meshes[i] = create_random_mesh("Mesh", 5);
   }
+  fill_random_points_arr();
   // int n= 5;
   // std::cout << "Mesh" + std::string(n) ;
 
@@ -185,6 +310,7 @@ int main(int, char **) {
   // Initialize ImGui for GLFW and OpenGL
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
+  ImPlot::CreateContext();
   ImGui::StyleColorsDark();
   // ImGuiIO &io = ImGui::GetIO();
   ImGui_ImplGlfw_InitForOpenGL(window, true);
@@ -198,6 +324,7 @@ int main(int, char **) {
     // Create your ImGui UI here
     my_window(meshes, 10);
     ImGui::ShowDemoWindow();
+    ImPlot::ShowDemoWindow();
 
     // Rendering
     ImGui::Render();
@@ -214,6 +341,7 @@ int main(int, char **) {
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
   ImGui::DestroyContext();
+  ImPlot::DestroyContext();
   glfwDestroyWindow(window);
   glfwTerminate();
   // ImGui_ImplOpenGL3_Init("#version 330");
