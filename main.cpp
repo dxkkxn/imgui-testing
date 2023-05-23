@@ -32,20 +32,78 @@ struct Point {
     return os;
   }
 };
+typedef struct Mesh {const char *string; std::vector<Point> points; friend std::ostream &operator<<(std::ostream &os, const Mesh &m) {os << "{ name: " << m.string << ", \n"; for (const auto &point : m.points) {os << "point: " << point << ",\n";} os << "}\n"; return os;}} Mesh;
 
-typedef struct Mesh {
-  const char *string;
-  std::vector<Point> points;
+#include <imgui_internal.h>
 
-  friend std::ostream &operator<<(std::ostream &os, const Mesh &m) {
-    os << "{ name: " << m.string << ", \n";
-    for (const auto &point : m.points) {
-      os << "point: " << point << ",\n";
+
+// ImGui::Begin("Custom Tree Node");
+
+bool MyTreeNode(const char* label)
+{
+    const ImGuiStyle& style = ImGui::GetStyle();
+    ImGuiStorage* storage = ImGui::GetStateStorage();
+
+    ImU32 id = ImGui::GetID(label);
+    int opened = storage->GetInt(id, 0);
+    float x = ImGui::GetCursorPosX();
+    ImGui::BeginGroup();
+    if (ImGui::InvisibleButton(label, ImVec2(-1, 13+style.FramePadding.y*2)))
+    {
+        int* p_opened = storage->GetIntRef(id, 0);
+        opened = *p_opened = !*p_opened;
     }
-    os << "}\n";
-    return os;
-  }
-} Mesh;
+    bool hovered = ImGui::IsItemHovered();
+    bool active = ImGui::IsItemActive();
+    if (hovered || active)
+        ImGui::GetWindowDrawList()->AddRectFilled(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), ImColor(ImGui::GetStyle().Colors[active ? ImGuiCol_HeaderActive : ImGuiCol_HeaderHovered]));
+
+    // Icon, text
+    ImGui::SameLine(x);
+    ImGui::ColorButton("buttton", opened ? ImColor(255,0,0) : ImColor(0,255,0));
+    ImGui::SameLine();
+    ImGui::Text(label);
+    ImGui::EndGroup();
+    if (opened)
+        ImGui::TreePush(label);
+    return opened != 0;
+};
+
+
+// ImGui::End();
+// bool MyTreeNode(const char *label) {
+//   ImGuiState &g = *GImGui;
+//   ImGuiWindow *window = g.CurrentWindow;
+
+//   ImU32 id = window->GetID(label);
+//   ImVec2 pos = window->DC.CursorPos;
+//   ImRect bb(pos, ImVec2(pos.x + ImGui::GetContentRegionAvail().x,
+//                         pos.y + g.FontSize + g.Style.FramePadding.y * 2));
+//   bool opened = ImGui::TreeNodeBehaviorIsOpened(id);
+//   bool hovered, held;
+//   if (ImGui::ButtonBehavior(bb, id, &hovered, &held, true))
+//     window->DC.StateStorage->SetInt(id, opened ? 0 : 1);
+//   if (hovered || held)
+//     window->DrawList->AddRectFilled(
+//         bb.Min, bb.Max,
+//         window->Color(held ? ImGuiCol_HeaderActive : ImGuiCol_HeaderHovered));
+
+//   // Icon, text
+//   float button_sz = g.FontSize + g.Style.FramePadding.y * 2;
+//   window->DrawList->AddRectFilled(
+//       pos, ImVec2(pos.x + button_sz, pos.y + button_sz),
+//       opened ? ImColor(255, 0, 0) : ImColor(0, 255, 0));
+//   ImGui::RenderText(ImVec2(pos.x + button_sz + g.Style.ItemInnerSpacing.x,
+//                            pos.y + g.Style.FramePadding.y),
+//                     label);
+
+//   ImGui::ItemSize(bb, g.Style.FramePadding.y);
+//   ImGui::ItemAdd(bb, &id);
+
+//   if (opened)
+//     ImGui::TreePush(label);
+//   return opened;
+// }
 
 Mesh *create_random_mesh(const char *s, int nb_points) {
   Mesh *m = new Mesh;
@@ -101,7 +159,7 @@ void my_window(Mesh **meshes, int len) {
   ImGui::Begin("MyWindow", nullptr, flags);
 
   // ImGui::Text("Hello, world %d", 123);
-  if (ImGui::TreeNode(ICON_FA_GEAR" test")) {
+  if (ImGui::TreeNodeEx(ICON_FA_GEAR" test")) {
     ImGui::Text("heeeellllo");
     ImGui::TreePop();
   }
@@ -143,6 +201,7 @@ void my_window(Mesh **meshes, int len) {
               // static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
               // char label[64];
               // sprintf(label, "##point: %d", j);// static int vec3i[3] = { 10, 20, 30 };
+
               ImGui::TableNextRow();
               ImGui::TableNextColumn();
               ImGui::Text("%.3f", point.x);
@@ -202,7 +261,9 @@ void my_window(Mesh **meshes, int len) {
       // for each point create sub node
       // if
       for (const auto &point : m->points) {
-        if (ImGui::TreeNode(&point, "point")) {
+        if (ImGui::TreeNodeEx(&point, ImGuiTreeNodeFlags_AllowItemOverlap, "point")) {
+          ImGui::SameLine(0, 0);
+          ImGui::Text(ICON_FA_BED);
           ImGui::Text("{ x: %f, y: %f, z: %f }", point.x, point.y, point.z);
           ImGui::TreePop();
         }
@@ -221,6 +282,16 @@ void my_window(Mesh **meshes, int len) {
     // selection behavior you want, may want to preserve selection when clicking
     // on item that is part of the selection
     selection_mask = (1 << node_clicked); // Click to single-select
+  }
+
+  if (MyTreeNode("Hello")) {
+    ImGui::Text("blah");
+    if (MyTreeNode("blah")) {
+      ImGui::Text("Hello");
+      ImGui::TreePop();
+    }
+    ImGui::Text("blah");
+    ImGui::TreePop();
   }
 
   // std::cout << open << "\n";
@@ -319,8 +390,11 @@ int main(int, char **) {
 
   ImFontConfig config;
   config.MergeMode = true;
-  config.GlyphMinAdvanceX =
-      13.0f; // Use if you want to make the icon monospaced
+  config.OversampleH = 5;
+  config.OversampleV = 5;
+  // config.GlyphExtraSpacing.x = 1.0f;
+  // config.GlyphMinAdvanceX =
+  //     13.0f; // Use if you want to make the icon monospaced
   static const ImWchar icon_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
   // io.Fonts->AddFontFromFileTTF("fa-regular-400.ttf", 13.0f, &config, icon_ranges);
   io.Fonts->AddFontFromFileTTF("fa-solid-900.ttf", 13.0f, &config, icon_ranges);
