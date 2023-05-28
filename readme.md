@@ -1,3 +1,7 @@
+# Clonage
+```bash
+git clone --recurse-submodules git@github.com:dxkkxn/imgui-testing.git
+```
 # Compilation
 Il faut commenter la fonction de la ligne 37 dans le fichier `external/imgui-node-editor/imgui-node-editor/imgui_extra_math.inl`
 ```c++
