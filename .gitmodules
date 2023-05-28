@@ -7,3 +7,4 @@
 [submodule "imgui-node-editor"]
 	path = external/imgui-node-editor/imgui-node-editor
 	url = https://github.com/thedmd/imgui-node-editor.git
+	branch = develop
