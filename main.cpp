@@ -141,13 +141,7 @@ float vg(void *data, int idx) {
   return sinf(idx + (float)ImGui::GetTime());
 }
 
-static bool object_inspector_active = false;
-void inspector_properties(Mesh * m, size_t size_y) {
-  object_inspector_active = true;
-  ImGui::SetNextWindowPos(ImVec2(0, size_y));
-  ImGui::SetNextWindowSize(ImVec2(WINDOW_SIZE, size_y));
-  if (ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-    // if (ImGui::BeginTable("table1", 3))
+void inspector_properties(Mesh * m) {
     ImGuiTableFlags flags =
         ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg |
         ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable |
@@ -216,13 +210,14 @@ void inspector_properties(Mesh * m, size_t size_y) {
                            "Pineapple", "Strawberry", "Watermelon"};
     static int item_current = 1;
     ImGui::ListBox("##listbox", &item_current, items, IM_ARRAYSIZE(items), 4);
-    std::cout << items[item_current] << std::endl;
-    ImGui::End();
-  }
+}
+
+void inspector_window(Mesh * m, size_t size_y) {
 }
 
 void my_window(Mesh **meshes, int len) {
   // fix window to left corner
+static bool object_inspector_active = false;
   float size_y = ImGui::GetIO().DisplaySize.y;
   if (object_inspector_active)
     size_y = size_y / 2;
@@ -257,9 +252,25 @@ void my_window(Mesh **meshes, int len) {
     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
       node_clicked = i;
     if (is_selected) {
-      // if (ImGui::BeginTabBar("Properties", 0)) {
-        inspector_properties(m, size_y);
-      // }
+      // create new window
+      object_inspector_active = true;
+      ImGui::SetNextWindowPos(ImVec2(0, size_y));
+      ImGui::SetNextWindowSize(ImVec2(WINDOW_SIZE, size_y));
+      if (ImGui::Begin("Inspector", nullptr,
+                       ImGuiWindowFlags_AlwaysAutoResize)) {
+        if (ImGui::BeginTabBar("TabBarTest", 0)) {
+          if (ImGui::BeginTabItem("Properties")) {
+            inspector_properties(m);
+            ImGui::EndTabItem();
+          }
+          if (ImGui::BeginTabItem("Logs")) {
+            ImGui::Text("Logs should go here");
+            ImGui::EndTabItem();
+          }
+          ImGui::EndTabBar();
+        }
+        ImGui::End();
+      }
     }
     if (node_open) {
       // ImGui::CheckboxFlags("ImGuiTreeNodeFlags_OpenOnArrow", &base_flags,
