@@ -124,7 +124,6 @@ std::string generateLoremIpsum(int numWords) {
     ss << words[dis(gen)];
   }
 
-  ss << "\n";
   return ss.str();
 }
 
@@ -147,10 +146,15 @@ Mesh *create_random_mesh(const char *s, int nb_points) {
   std::string logs[] = {m->info_logs, m->warning_logs, m->error_logs};
   std::uniform_int_distribution<int> logs_nb(0, 10);
   std::uniform_int_distribution<int> nb_words(1, 30);
+  std::uniform_int_distribution<int> ms(0, 10'000);
   for (int i = 0; i < 3; i++) {
     int nb_logs = logs_nb(gen);
     for (int j = 0; j < nb_logs; j++) {
       logs[i] += generateLoremIpsum(nb_words(gen));
+      char time[64];
+      sprintf(time, " {t=%d}\n", ms(gen));
+      std::cout << time;
+      logs[i] += time;
     }
   }
   m->info_logs = logs[0];
@@ -174,6 +178,19 @@ void fill_random_points_arr() {
 float vg(void *data, int idx) {
   float *fdata = (float *)data;
   return sinf(idx + (float)ImGui::GetTime());
+}
+
+
+std::vector<std::string> split_log(std::string log) {
+  std::vector<std::string> tokens;
+  std::istringstream iss(log);
+  std::string token;
+
+  while (std::getline(iss, token, '\n')) {
+    tokens.push_back(token);
+  }
+
+  return tokens;
 }
 
 void inspector_properties(Mesh *m) {
@@ -247,16 +264,37 @@ void inspector_properties(Mesh *m) {
   ImGui::ListBox("##listbox", &item_current, items, IM_ARRAYSIZE(items), 4);
 }
 
-std::vector<std::string> split_log(std::string log) {
-  std::vector<std::string> tokens;
-  std::istringstream iss(log);
-  std::string token;
-
-  while (std::getline(iss, token, '\n')) {
-    tokens.push_back(token);
+void inspector_logs(Mesh *m) {
+  ImGuiTableFlags flags =
+      ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg |
+      ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable |
+      ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+  if (ImGui::BeginTable("logs table", 3, flags)) {
+    ImGui::TableSetupColumn("timecode (ms)",
+                            ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("type", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("message", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableHeadersRow();
+    std::string logs[] = {m->error_logs, m->warning_logs, m->info_logs};
+    const char * labels[] = {"ERROR", "WARNING", "INFO"};
+    ImVec4 colors[] = {ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
+                       ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
+                       ImVec4(0.0f, 1.0f, 0.0f, 1.0f)};
+    for (int i = 0; i < 3; i++) {
+      std::vector<std::string> messages = split_log(logs[i]);
+      for (std::string string : messages) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("0.0");
+        ImGui::TableNextColumn();
+        ImGui::TextColored(colors[i], labels[i]);
+        ImGui::TableNextColumn();
+        ImGui::Text(string.c_str());
+        ImGui::TableNextColumn();
+      }
+    }
+    ImGui::EndTable();
   }
-
-  return tokens;
 }
 
 void my_window(Mesh **meshes, int len) {
@@ -308,59 +346,7 @@ void my_window(Mesh **meshes, int len) {
             ImGui::EndTabItem();
           }
           if (ImGui::BeginTabItem("Logs")) {
-            ImGuiTableFlags flags =
-                ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg |
-                ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable |
-                ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
-            if (ImGui::BeginTable("logs table", 3, flags)) {
-              ImGui::TableSetupColumn("timecode (ms)",
-                                      ImGuiTableColumnFlags_WidthStretch);
-              ImGui::TableSetupColumn("type",
-                                      ImGuiTableColumnFlags_WidthStretch);
-              ImGui::TableSetupColumn("message",
-                                      ImGuiTableColumnFlags_WidthStretch);
-              ImGui::TableHeadersRow();
-              std::vector<std::string> error_logs = split_log(m->error_logs);
-              for (std::string string : error_logs) {
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::Text("0.0");
-                ImGui::TableNextColumn();
-                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "ERROR");
-                ImGui::TableNextColumn();
-                ImGui::Text(string.c_str());
-                ImGui::TableNextColumn();
-              }
-
-              std::vector<std::string> war_logs = split_log(m->warning_logs);
-              for (std::string string : war_logs) {
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::Text("0.0");
-                ImGui::TableNextColumn();
-                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "WARNING");
-                ImGui::TableNextColumn();
-                ImGui::Text(string.c_str());
-                ImGui::TableNextColumn();
-              }
-              std::vector<std::string> info_logs = split_log(m->info_logs);
-              for (std::string string : info_logs) {
-                ImGui::TableNextRow();
-                ImGui::TableNextColumn();
-                ImGui::Text("0.0");
-                ImGui::TableNextColumn();
-                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "INFO");
-                ImGui::TableNextColumn();
-                ImGui::Text(string.c_str());
-                ImGui::TableNextColumn();
-              }
-              // ImGui::Text(m->error_logs.c_str());
-              // ImGui::Text("WARNINGS");
-              // ImGui::Text(m->warning_logs.c_str());
-              // ImGui::Text("INFO");
-              // ImGui::Text(m->info_logs.c_str());
-              ImGui::EndTable();
-            }
+            inspector_logs(m);
             ImGui::EndTabItem();
           }
           ImGui::EndTabBar();
