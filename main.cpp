@@ -1,19 +1,19 @@
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 #include "imgui.h"
-#include "implot.h"
 #include "imgui_node_editor.h"
+#include "implot.h"
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 #include <cstdio>
 
 #include "icons.h"
+#include <array>
 #include <cstring>
 #include <iostream>
 #include <random>
+#include <sstream>
 #include <string>
 #include <vector>
-#include <array>
-#include <sstream>
 
 #define WINDOW_SIZE 300
 
@@ -88,8 +88,8 @@ bool MyTreeNode(const char *label) {
   return opened != 0;
 };
 
-bool ** create_random_graph(const int n) {
-  bool ** graph = new bool*[n];
+bool **create_random_graph(const int n) {
+  bool **graph = new bool *[n];
   for (int i = 0; i < n; i++) {
     graph[i] = new bool[n];
   }
@@ -99,35 +99,33 @@ bool ** create_random_graph(const int n) {
   std::bernoulli_distribution distribution(0.5);
 
   for (int i = 0; i < n; i++) {
-    for (int j = i; j < n; j++ ) {
+    for (int j = i; j < n; j++) {
       graph[i][j] = distribution(gen);
     }
   }
   return graph;
-
 }
 
-std::string generateLoremIpsum(int numWords)
-{
-    std::vector<std::string> words = {
-        "Lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit",
-        "sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore", "magna", "aliqua"
-    };
+std::string generateLoremIpsum(int numWords) {
+  std::vector<std::string> words = {
+      "Lorem",       "ipsum",      "dolor",      "sit",   "amet",
+      "consectetur", "adipiscing", "elit",       "sed",   "do",
+      "eiusmod",     "tempor",     "incididunt", "ut",    "labore",
+      "et",          "dolore",     "magna",      "aliqua"};
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, words.size() - 1);
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dis(0, words.size() - 1);
 
-    std::stringstream ss;
-    for (int i = 0; i < numWords; ++i)
-    {
-        if (i > 0)
-            ss << ' ';
-        ss << words[dis(gen)];
-    }
+  std::stringstream ss;
+  for (int i = 0; i < numWords; ++i) {
+    if (i > 0)
+      ss << ' ';
+    ss << words[dis(gen)];
+  }
 
-    ss << "\n";
-    return ss.str();
+  ss << "\n";
+  return ss.str();
 }
 
 Mesh *create_random_mesh(const char *s, int nb_points) {
@@ -151,7 +149,7 @@ Mesh *create_random_mesh(const char *s, int nb_points) {
   std::uniform_int_distribution<int> nb_words(1, 30);
   for (int i = 0; i < 3; i++) {
     int nb_logs = logs_nb(gen);
-    for (int j=0; j< nb_logs; j++) {
+    for (int j = 0; j < nb_logs; j++) {
       logs[i] += generateLoremIpsum(nb_words(gen));
     }
   }
@@ -173,88 +171,97 @@ void fill_random_points_arr() {
   }
 }
 
-// void inspector_window
-
 float vg(void *data, int idx) {
   float *fdata = (float *)data;
   return sinf(idx + (float)ImGui::GetTime());
 }
 
-void inspector_properties(Mesh * m) {
-    ImGuiTableFlags flags =
-        ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg |
-        ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable |
-        ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
-    if (ImGui::BeginTable("table1", 3, flags)) {
-      ImGui::TableSetupColumn("x", ImGuiTableColumnFlags_WidthFixed);
-      ImGui::TableSetupColumn("y", ImGuiTableColumnFlags_WidthFixed);
-      ImGui::TableSetupColumn("z", ImGuiTableColumnFlags_WidthStretch);
-      ImGui::TableHeadersRow();
-      int j = 0;
-      for (const auto &point : m->points) {
-        // if (ImGui::TreeNode(&point, "point")) {
-        //   ImGui::Text("{ x: %d, y: %d, z: %d }", point.x, point.y,
-        //   point.z); ImGui::TreePop();
-        // }
-        // if (ImGui::TreeNode(&point, "point")) {
-        // static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
-        // char label[64];
-        // sprintf(label, "##point: %d", j);// static int vec3i[3] = { 10,
-        // 20, 30 };
+void inspector_properties(Mesh *m) {
+  ImGuiTableFlags flags =
+      ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg |
+      ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable |
+      ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+  if (ImGui::BeginTable("table1", 3, flags)) {
+    ImGui::TableSetupColumn("x", ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableSetupColumn("y", ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableSetupColumn("z", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableHeadersRow();
+    int j = 0;
+    for (const auto &point : m->points) {
+      // if (ImGui::TreeNode(&point, "point")) {
+      //   ImGui::Text("{ x: %d, y: %d, z: %d }", point.x, point.y,
+      //   point.z); ImGui::TreePop();
+      // }
+      // if (ImGui::TreeNode(&point, "point")) {
+      // static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+      // char label[64];
+      // sprintf(label, "##point: %d", j);// static int vec3i[3] = { 10,
+      // 20, 30 };
 
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("%.3f", point.x);
-        ImGui::TableNextColumn();
-        ImGui::Text("%.3f", point.y);
-        ImGui::TableNextColumn();
-        ImGui::Text("%.3f", point.z);
-        // ImGui::InputScalarN(label, ImGuiDataType_Float, (void *)&point,
-        // 3, NULL, NULL, NULL, ImGuiInputTextFlags_ReadOnly);
-        // ImGui::TableNextColumn();
-        // ImGui::TableNextColumn();
-        // ImGui::Text("{ x: %d, y: %d, z: %d }", point.x, point.y,
-        // point.z); ImGui::TreePop();
-        // }
-        j++;
-      }
-
-      for (const auto &point : m->points) {
-        char label[64];
-        sprintf(label, "##point: %d",
-                j); // static int vec3i[3] = { 10, 20, 30 };
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::InputFloat(label, (float *)&(point.x));
-        ImGui::TableNextColumn();
-        ImGui::InputFloat(label, (float *)&(point.y));
-        ImGui::TableNextColumn();
-        ImGui::InputFloat(label, (float *)&(point.z));
-      }
-      ImGui::EndTable();
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      ImGui::Text("%.3f", point.x);
+      ImGui::TableNextColumn();
+      ImGui::Text("%.3f", point.y);
+      ImGui::TableNextColumn();
+      ImGui::Text("%.3f", point.z);
+      // ImGui::InputScalarN(label, ImGuiDataType_Float, (void *)&point,
+      // 3, NULL, NULL, NULL, ImGuiInputTextFlags_ReadOnly);
+      // ImGui::TableNextColumn();
+      // ImGui::TableNextColumn();
+      // ImGui::Text("{ x: %d, y: %d, z: %d }", point.x, point.y,
+      // point.z); ImGui::TreePop();
+      // }
+      j++;
     }
 
-    static bool check = true;
-    ImGui::Checkbox("checkbox", &check);
+    for (const auto &point : m->points) {
+      char label[64];
+      sprintf(label, "##point: %d",
+              j); // static int vec3i[3] = { 10, 20, 30 };
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      ImGui::InputFloat(label, (float *)&(point.x));
+      ImGui::TableNextColumn();
+      ImGui::InputFloat(label, (float *)&(point.y));
+      ImGui::TableNextColumn();
+      ImGui::InputFloat(label, (float *)&(point.z));
+    }
+    ImGui::EndTable();
+  }
 
-    static int e = 0;
-    ImGui::RadioButton("Apple", &e, 0);
-    ImGui::SameLine();
-    ImGui::RadioButton("Banana", &e, 1);
-    ImGui::SameLine();
-    ImGui::RadioButton("Cherry", &e, 2);
+  static bool check = true;
+  ImGui::Checkbox("checkbox", &check);
 
-    const char *items[] = {"Apple",     "Banana",     "Cherry",
-                           "Kiwi",      "Mango",      "Orange",
-                           "Pineapple", "Strawberry", "Watermelon"};
-    static int item_current = 1;
-    ImGui::ListBox("##listbox", &item_current, items, IM_ARRAYSIZE(items), 4);
+  static int e = 0;
+  ImGui::RadioButton("Apple", &e, 0);
+  ImGui::SameLine();
+  ImGui::RadioButton("Banana", &e, 1);
+  ImGui::SameLine();
+  ImGui::RadioButton("Cherry", &e, 2);
+
+  const char *items[] = {"Apple",     "Banana",     "Cherry",
+                         "Kiwi",      "Mango",      "Orange",
+                         "Pineapple", "Strawberry", "Watermelon"};
+  static int item_current = 1;
+  ImGui::ListBox("##listbox", &item_current, items, IM_ARRAYSIZE(items), 4);
 }
 
+std::vector<std::string> split_log(std::string log) {
+  std::vector<std::string> tokens;
+  std::istringstream iss(log);
+  std::string token;
+
+  while (std::getline(iss, token, '\n')) {
+    tokens.push_back(token);
+  }
+
+  return tokens;
+}
 
 void my_window(Mesh **meshes, int len) {
   // fix window to left corner
-static bool object_inspector_active = false;
+  static bool object_inspector_active = false;
   float size_y = ImGui::GetIO().DisplaySize.y;
   if (object_inspector_active)
     size_y = size_y / 2;
@@ -301,12 +308,59 @@ static bool object_inspector_active = false;
             ImGui::EndTabItem();
           }
           if (ImGui::BeginTabItem("Logs")) {
-            ImGui::Text("ERRORS");
-            ImGui::Text(m->error_logs.c_str());
-            ImGui::Text("WARNINGS");
-            ImGui::Text(m->warning_logs.c_str());
-            ImGui::Text("INFO");
-            ImGui::Text(m->info_logs.c_str());
+            ImGuiTableFlags flags =
+                ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg |
+                ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable |
+                ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+            if (ImGui::BeginTable("logs table", 3, flags)) {
+              ImGui::TableSetupColumn("timecode (ms)",
+                                      ImGuiTableColumnFlags_WidthStretch);
+              ImGui::TableSetupColumn("type",
+                                      ImGuiTableColumnFlags_WidthStretch);
+              ImGui::TableSetupColumn("message",
+                                      ImGuiTableColumnFlags_WidthStretch);
+              ImGui::TableHeadersRow();
+              std::vector<std::string> error_logs = split_log(m->error_logs);
+              for (std::string string : error_logs) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("0.0");
+                ImGui::TableNextColumn();
+                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "ERROR");
+                ImGui::TableNextColumn();
+                ImGui::Text(string.c_str());
+                ImGui::TableNextColumn();
+              }
+
+              std::vector<std::string> war_logs = split_log(m->warning_logs);
+              for (std::string string : war_logs) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("0.0");
+                ImGui::TableNextColumn();
+                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "WARNING");
+                ImGui::TableNextColumn();
+                ImGui::Text(string.c_str());
+                ImGui::TableNextColumn();
+              }
+              std::vector<std::string> info_logs = split_log(m->info_logs);
+              for (std::string string : info_logs) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn();
+                ImGui::Text("0.0");
+                ImGui::TableNextColumn();
+                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "INFO");
+                ImGui::TableNextColumn();
+                ImGui::Text(string.c_str());
+                ImGui::TableNextColumn();
+              }
+              // ImGui::Text(m->error_logs.c_str());
+              // ImGui::Text("WARNINGS");
+              // ImGui::Text(m->warning_logs.c_str());
+              // ImGui::Text("INFO");
+              // ImGui::Text(m->info_logs.c_str());
+              ImGui::EndTable();
+            }
             ImGui::EndTabItem();
           }
           ImGui::EndTabBar();
@@ -427,17 +481,18 @@ static bool object_inspector_active = false;
 }
 
 bool first_loop = true;
-ImVec2 * positions;
-ed::EditorContext* ed_context;
+ImVec2 *positions;
+ed::EditorContext *ed_context;
 
-void node_editor(bool ** graph, int n) {
+void node_editor(bool **graph, int n) {
   float size_y = ImGui::GetIO().DisplaySize.y;
   float size_x = ImGui::GetIO().DisplaySize.x;
-  float x = (size_x - WINDOW_SIZE)/2;
+  float x = (size_x - WINDOW_SIZE) / 2;
   float y = size_y - WINDOW_SIZE;
   ImGui::SetNextWindowPos(ImVec2(WINDOW_SIZE + x, 0));
   ImGui::SetNextWindowSize(ImVec2(x, y));
-  ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+  ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar |
+                           ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
   if (ImGui::Begin("graph window", nullptr, flags)) {
     auto &io = ImGui::GetIO();
 
@@ -547,7 +602,8 @@ int main(int, char **) {
   static const ImWchar icon_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
   // io.Fonts->AddFontFromFileTTF("fa-regular-400.ttf", 13.0f, &config,
   // icon_ranges);
-  io.Fonts->AddFontFromFileTTF("../fa-solid-900.ttf", 13.0f, &config, icon_ranges);
+  io.Fonts->AddFontFromFileTTF("../fa-solid-900.ttf", 13.0f, &config,
+                               icon_ranges);
   // Example of loading an icon font
   // ImGuiIO& io = ImGui::GetIO();
   // io.Fonts->AddFontFromFileTTF("fa-solid-900.ttf", 13);
@@ -558,7 +614,7 @@ int main(int, char **) {
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init();
 
-  bool ** graph = create_random_graph(10);
+  bool **graph = create_random_graph(10);
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
