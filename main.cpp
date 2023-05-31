@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <sstream>
 
 #define WINDOW_SIZE 300
 
@@ -39,6 +40,9 @@ struct Point {
 typedef struct Mesh {
   const char *string;
   std::vector<Point> points;
+  std::string info_logs;
+  std::string warning_logs;
+  std::string error_logs;
   friend std::ostream &operator<<(std::ostream &os, const Mesh &m) {
     os << "{ name: " << m.string << ", \n";
     for (const auto &point : m.points) {
@@ -103,6 +107,29 @@ bool ** create_random_graph(const int n) {
 
 }
 
+std::string generateLoremIpsum(int numWords)
+{
+    std::vector<std::string> words = {
+        "Lorem", "ipsum", "dolor", "sit", "amet", "consectetur", "adipiscing", "elit",
+        "sed", "do", "eiusmod", "tempor", "incididunt", "ut", "labore", "et", "dolore", "magna", "aliqua"
+    };
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, words.size() - 1);
+
+    std::stringstream ss;
+    for (int i = 0; i < numWords; ++i)
+    {
+        if (i > 0)
+            ss << ' ';
+        ss << words[dis(gen)];
+    }
+
+    ss << "\n";
+    return ss.str();
+}
+
 Mesh *create_random_mesh(const char *s, int nb_points) {
   Mesh *m = new Mesh;
   m->string = s;
@@ -119,6 +146,18 @@ Mesh *create_random_mesh(const char *s, int nb_points) {
     p.z = distribution(gen);
     (m->points).emplace_back(p);
   }
+  std::string logs[] = {m->info_logs, m->warning_logs, m->error_logs};
+  std::uniform_int_distribution<int> logs_nb(0, 10);
+  std::uniform_int_distribution<int> nb_words(1, 30);
+  for (int i = 0; i < 3; i++) {
+    int nb_logs = logs_nb(gen);
+    for (int j=0; j< nb_logs; j++) {
+      logs[i] += generateLoremIpsum(nb_words(gen));
+    }
+  }
+  m->info_logs = logs[0];
+  m->warning_logs = logs[1];
+  m->error_logs = logs[2];
   return m;
 };
 
@@ -212,8 +251,6 @@ void inspector_properties(Mesh * m) {
     ImGui::ListBox("##listbox", &item_current, items, IM_ARRAYSIZE(items), 4);
 }
 
-void inspector_window(Mesh * m, size_t size_y) {
-}
 
 void my_window(Mesh **meshes, int len) {
   // fix window to left corner
@@ -264,7 +301,12 @@ static bool object_inspector_active = false;
             ImGui::EndTabItem();
           }
           if (ImGui::BeginTabItem("Logs")) {
-            ImGui::Text("Logs should go here");
+            ImGui::Text("ERRORS");
+            ImGui::Text(m->error_logs.c_str());
+            ImGui::Text("WARNINGS");
+            ImGui::Text(m->warning_logs.c_str());
+            ImGui::Text("INFO");
+            ImGui::Text(m->info_logs.c_str());
             ImGui::EndTabItem();
           }
           ImGui::EndTabBar();
