@@ -177,7 +177,7 @@ void my_window(Mesh **meshes, int len) {
                                        ICON_FA_FUTBOL " Mesh %d", i);
     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
       node_clicked = i;
-    if (node_open) {
+    if (is_selected) {
       object_inspector_active = true;
       ImGui::SetNextWindowPos(ImVec2(0, size_y));
       ImGui::SetNextWindowSize(ImVec2(WINDOW_SIZE, size_y));
