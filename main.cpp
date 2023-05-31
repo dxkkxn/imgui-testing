@@ -14,6 +14,7 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 #define WINDOW_SIZE 300
 
@@ -153,7 +154,6 @@ Mesh *create_random_mesh(const char *s, int nb_points) {
       logs[i] += generateLoremIpsum(nb_words(gen));
       char time[64];
       sprintf(time, " {t=%d}\n", ms(gen));
-      std::cout << time;
       logs[i] += time;
     }
   }
@@ -264,37 +264,69 @@ void inspector_properties(Mesh *m) {
   ImGui::ListBox("##listbox", &item_current, items, IM_ARRAYSIZE(items), 4);
 }
 
-void inspector_logs(Mesh *m) {
-  ImGuiTableFlags flags =
-      ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg |
-      ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable |
-      ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
-  if (ImGui::BeginTable("logs table", 3, flags)) {
-    ImGui::TableSetupColumn("timecode (ms)",
-                            ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableSetupColumn("type", ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableSetupColumn("message", ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableHeadersRow();
-    std::string logs[] = {m->error_logs, m->warning_logs, m->info_logs};
-    const char * labels[] = {"ERROR", "WARNING", "INFO"};
+typedef enum { ERROR = 0, WARNING = 1, INFO = 2 } log_type_t;
+typedef struct log {
+  char message[512];
+  int time;
+  log_type_t type;
+} log_t;
+
+bool compare_log_t(const log_t &a, const log_t &b) {
+  return a.time < b.time;
+}
+
+std::vector<log_t> get_formatted_sorted_logs(Mesh *m) {
+  std::string logs[] = {m->error_logs, m->warning_logs, m->info_logs};
+  std::vector<log_t> formatted_logs;
+  for (int i = 0; i < 3; i++) {
+    std::vector<std::string> messages = split_log(logs[i]);
+    for (std::string string : messages) {
+      log_t new_log;
+      sscanf(string.c_str(), "%[^{] {t=%d}", new_log.message, &(new_log.time));
+      new_log.type = (log_type_t)i;
+      formatted_logs.emplace_back(new_log);
+    }
+  }
+
+  std::sort(formatted_logs.begin(), formatted_logs.end(), compare_log_t);
+  // for (log_t log : formatted_logs) {
+  //   std::cout << "---------" << std::endl;
+  //   std::cout << log.message << std::endl;
+  //   std::cout << log.time << std::endl;
+  //   std::cout << "=========" << std::endl;
+  // }
+  return formatted_logs;
+}
+
+  void inspector_logs(Mesh * m) {
+    ImGuiTableFlags flags =
+        ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg |
+        ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable |
+        ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+    if (ImGui::BeginTable("logs table", 3, flags)) {
+      ImGui::TableSetupColumn("timecode (ms)",
+                              ImGuiTableColumnFlags_WidthStretch);
+      ImGui::TableSetupColumn("type", ImGuiTableColumnFlags_WidthStretch);
+      ImGui::TableSetupColumn("message", ImGuiTableColumnFlags_WidthStretch);
+      ImGui::TableHeadersRow();
+    }
+    std::vector<log_t> logs = get_formatted_sorted_logs(m);
+
+    const char *labels[] = {"ERROR", "WARNING", "INFO"};
     ImVec4 colors[] = {ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
-                       ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
-                       ImVec4(0.0f, 1.0f, 0.0f, 1.0f)};
-    for (int i = 0; i < 3; i++) {
-      std::vector<std::string> messages = split_log(logs[i]);
-      for (std::string string : messages) {
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        ImGui::Text("0.0");
-        ImGui::TableNextColumn();
-        ImGui::TextColored(colors[i], labels[i]);
-        ImGui::TableNextColumn();
-        ImGui::Text(string.c_str());
-        ImGui::TableNextColumn();
-      }
+                      ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
+                      ImVec4(0.0f, 1.0f, 0.0f, 1.0f)};
+    for (log_t log : logs) {
+      ImGui::TableNextRow();
+      ImGui::TableNextColumn();
+      ImGui::Text("%d", log.time);
+      ImGui::TableNextColumn();
+      ImGui::TextColored(colors[log.type], labels[log.type]);
+      ImGui::TableNextColumn();
+      ImGui::TextWrapped(log.message);
+      ImGui::TableNextColumn();
     }
     ImGui::EndTable();
-  }
 }
 
 void my_window(Mesh **meshes, int len) {
@@ -495,8 +527,6 @@ void node_editor(bool **graph, int n) {
       int x = ed::GetScreenSize().x;
       int y = ed::GetScreenSize().y;
 
-      std::cout << x << std::endl;
-      std::cout << y << std::endl;
       first_loop = false;
 
       std::random_device rd;
