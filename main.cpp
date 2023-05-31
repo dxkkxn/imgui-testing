@@ -141,9 +141,88 @@ float vg(void *data, int idx) {
   return sinf(idx + (float)ImGui::GetTime());
 }
 
+static bool object_inspector_active = false;
+void inspector_properties(Mesh * m, size_t size_y) {
+  object_inspector_active = true;
+  ImGui::SetNextWindowPos(ImVec2(0, size_y));
+  ImGui::SetNextWindowSize(ImVec2(WINDOW_SIZE, size_y));
+  if (ImGui::Begin("Inspector", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+    // if (ImGui::BeginTable("table1", 3))
+    ImGuiTableFlags flags =
+        ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg |
+        ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable |
+        ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+    if (ImGui::BeginTable("table1", 3, flags)) {
+      ImGui::TableSetupColumn("x", ImGuiTableColumnFlags_WidthFixed);
+      ImGui::TableSetupColumn("y", ImGuiTableColumnFlags_WidthFixed);
+      ImGui::TableSetupColumn("z", ImGuiTableColumnFlags_WidthStretch);
+      ImGui::TableHeadersRow();
+      int j = 0;
+      for (const auto &point : m->points) {
+        // if (ImGui::TreeNode(&point, "point")) {
+        //   ImGui::Text("{ x: %d, y: %d, z: %d }", point.x, point.y,
+        //   point.z); ImGui::TreePop();
+        // }
+        // if (ImGui::TreeNode(&point, "point")) {
+        // static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+        // char label[64];
+        // sprintf(label, "##point: %d", j);// static int vec3i[3] = { 10,
+        // 20, 30 };
+
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("%.3f", point.x);
+        ImGui::TableNextColumn();
+        ImGui::Text("%.3f", point.y);
+        ImGui::TableNextColumn();
+        ImGui::Text("%.3f", point.z);
+        // ImGui::InputScalarN(label, ImGuiDataType_Float, (void *)&point,
+        // 3, NULL, NULL, NULL, ImGuiInputTextFlags_ReadOnly);
+        // ImGui::TableNextColumn();
+        // ImGui::TableNextColumn();
+        // ImGui::Text("{ x: %d, y: %d, z: %d }", point.x, point.y,
+        // point.z); ImGui::TreePop();
+        // }
+        j++;
+      }
+
+      for (const auto &point : m->points) {
+        char label[64];
+        sprintf(label, "##point: %d",
+                j); // static int vec3i[3] = { 10, 20, 30 };
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::InputFloat(label, (float *)&(point.x));
+        ImGui::TableNextColumn();
+        ImGui::InputFloat(label, (float *)&(point.y));
+        ImGui::TableNextColumn();
+        ImGui::InputFloat(label, (float *)&(point.z));
+      }
+      ImGui::EndTable();
+    }
+
+    static bool check = true;
+    ImGui::Checkbox("checkbox", &check);
+
+    static int e = 0;
+    ImGui::RadioButton("Apple", &e, 0);
+    ImGui::SameLine();
+    ImGui::RadioButton("Banana", &e, 1);
+    ImGui::SameLine();
+    ImGui::RadioButton("Cherry", &e, 2);
+
+    const char *items[] = {"Apple",     "Banana",     "Cherry",
+                           "Kiwi",      "Mango",      "Orange",
+                           "Pineapple", "Strawberry", "Watermelon"};
+    static int item_current = 1;
+    ImGui::ListBox("##listbox", &item_current, items, IM_ARRAYSIZE(items), 4);
+    std::cout << items[item_current] << std::endl;
+    ImGui::End();
+  }
+}
+
 void my_window(Mesh **meshes, int len) {
   // fix window to left corner
-  static bool object_inspector_active = false;
   float size_y = ImGui::GetIO().DisplaySize.y;
   if (object_inspector_active)
     size_y = size_y / 2;
@@ -178,84 +257,9 @@ void my_window(Mesh **meshes, int len) {
     if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
       node_clicked = i;
     if (is_selected) {
-      object_inspector_active = true;
-      ImGui::SetNextWindowPos(ImVec2(0, size_y));
-      ImGui::SetNextWindowSize(ImVec2(WINDOW_SIZE, size_y));
-      if (ImGui::Begin("Inspector", nullptr,
-                       ImGuiWindowFlags_AlwaysAutoResize)) {
-        // if (ImGui::BeginTable("table1", 3))
-        ImGuiTableFlags flags =
-            ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg |
-            ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable |
-            ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
-        if (ImGui::BeginTable("table1", 3, flags)) {
-          ImGui::TableSetupColumn("x", ImGuiTableColumnFlags_WidthFixed);
-          ImGui::TableSetupColumn("y", ImGuiTableColumnFlags_WidthFixed);
-          ImGui::TableSetupColumn("z", ImGuiTableColumnFlags_WidthStretch);
-          ImGui::TableHeadersRow();
-          int j = 0;
-          for (const auto &point : m->points) {
-            // if (ImGui::TreeNode(&point, "point")) {
-            //   ImGui::Text("{ x: %d, y: %d, z: %d }", point.x, point.y,
-            //   point.z); ImGui::TreePop();
-            // }
-            // if (ImGui::TreeNode(&point, "point")) {
-            // static float vec4f[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
-            // char label[64];
-            // sprintf(label, "##point: %d", j);// static int vec3i[3] = { 10,
-            // 20, 30 };
-
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::Text("%.3f", point.x);
-            ImGui::TableNextColumn();
-            ImGui::Text("%.3f", point.y);
-            ImGui::TableNextColumn();
-            ImGui::Text("%.3f", point.z);
-            // ImGui::InputScalarN(label, ImGuiDataType_Float, (void *)&point,
-            // 3, NULL, NULL, NULL, ImGuiInputTextFlags_ReadOnly);
-            // ImGui::TableNextColumn();
-            // ImGui::TableNextColumn();
-            // ImGui::Text("{ x: %d, y: %d, z: %d }", point.x, point.y,
-            // point.z); ImGui::TreePop();
-            // }
-            j++;
-          }
-
-          for (const auto &point : m->points) {
-            char label[64];
-            sprintf(label, "##point: %d",
-                    j); // static int vec3i[3] = { 10, 20, 30 };
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::InputFloat(label, (float *)&(point.x));
-            ImGui::TableNextColumn();
-            ImGui::InputFloat(label, (float *)&(point.y));
-            ImGui::TableNextColumn();
-            ImGui::InputFloat(label, (float *)&(point.z));
-          }
-          ImGui::EndTable();
-        }
-
-        static bool check = true;
-        ImGui::Checkbox("checkbox", &check);
-
-        static int e = 0;
-        ImGui::RadioButton("Apple", &e, 0);
-        ImGui::SameLine();
-        ImGui::RadioButton("Banana", &e, 1);
-        ImGui::SameLine();
-        ImGui::RadioButton("Cherry", &e, 2);
-
-        const char *items[] = {"Apple",     "Banana",     "Cherry",
-                               "Kiwi",      "Mango",      "Orange",
-                               "Pineapple", "Strawberry", "Watermelon"};
-        static int item_current = 1;
-        ImGui::ListBox("##listbox", &item_current, items, IM_ARRAYSIZE(items),
-                       4);
-        std::cout << items[item_current] << std::endl;
-        ImGui::End();
-      }
+      // if (ImGui::BeginTabBar("Properties", 0)) {
+        inspector_properties(m, size_y);
+      // }
     }
     if (node_open) {
       // ImGui::CheckboxFlags("ImGuiTreeNodeFlags_OpenOnArrow", &base_flags,
