@@ -287,46 +287,47 @@ std::vector<log_t> get_formatted_sorted_logs(Mesh *m) {
       formatted_logs.emplace_back(new_log);
     }
   }
-
   std::sort(formatted_logs.begin(), formatted_logs.end(), compare_log_t);
-  // for (log_t log : formatted_logs) {
-  //   std::cout << "---------" << std::endl;
-  //   std::cout << log.message << std::endl;
-  //   std::cout << log.time << std::endl;
-  //   std::cout << "=========" << std::endl;
-  // }
   return formatted_logs;
 }
 
-  void inspector_logs(Mesh * m) {
-    ImGuiTableFlags flags =
-        ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg |
-        ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable |
-        ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
-    if (ImGui::BeginTable("logs table", 3, flags)) {
-      ImGui::TableSetupColumn("timecode (ms)",
-                              ImGuiTableColumnFlags_WidthStretch);
-      ImGui::TableSetupColumn("type", ImGuiTableColumnFlags_WidthStretch);
-      ImGui::TableSetupColumn("message", ImGuiTableColumnFlags_WidthStretch);
-      ImGui::TableHeadersRow();
-    }
-    std::vector<log_t> logs = get_formatted_sorted_logs(m);
+void inspector_logs(Mesh *m) {
+  const char *labels[] = {"ERROR", "WARNING", "INFO"};
+  ImVec4 colors[] = {ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
+                     ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
+                     ImVec4(0.0f, 1.0f, 0.0f, 1.0f)};
+  bool check;
+  for (int i = 0; i < 3; i++) {
+    ImGui::TextColored(colors[i], labels[i]); ImGui::SameLine();
+    ImGui::Checkbox("###i", &check); ImGui::SameLine();
+  }
+  ImGui::NewLine();
+  ImGuiTableFlags flags =
+      ImGuiTableFlags_SizingFixedFit
+    | ImGuiTableFlags_RowBg |
+      ImGuiTableFlags_Borders |
+      ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable ;
+  if (ImGui::BeginTable("logs table", 3, flags)) {
+    ImGui::TableSetupColumn("time");
+    ImGui::TableSetupColumn("type");
+    ImGui::TableSetupColumn("message");
+    ImGui::TableHeadersRow();
+  }
+  std::vector<log_t> logs = get_formatted_sorted_logs(m);
 
-    const char *labels[] = {"ERROR", "WARNING", "INFO"};
-    ImVec4 colors[] = {ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
-                      ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
-                      ImVec4(0.0f, 1.0f, 0.0f, 1.0f)};
-    for (log_t log : logs) {
-      ImGui::TableNextRow();
-      ImGui::TableNextColumn();
-      ImGui::Text("%d", log.time);
-      ImGui::TableNextColumn();
-      ImGui::TextColored(colors[log.type], labels[log.type]);
-      ImGui::TableNextColumn();
+  for (log_t log : logs) {
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::Text("%d", log.time);
+    ImGui::TableNextColumn();
+    ImGui::TextColored(colors[log.type], labels[log.type]);
+    ImGui::TableNextColumn();
+    if (ImGui::TreeNodeEx(log.message, ImGuiTreeNodeFlags_NoTreePushOnOpen)) {
       ImGui::TextWrapped(log.message);
-      ImGui::TableNextColumn();
     }
-    ImGui::EndTable();
+    ImGui::TableNextColumn();
+  }
+  ImGui::EndTable();
 }
 
 void my_window(Mesh **meshes, int len) {
