@@ -261,7 +261,7 @@ void inspector_properties(Mesh *m) {
                          "Kiwi",      "Mango",      "Orange",
                          "Pineapple", "Strawberry", "Watermelon"};
   static int item_current = 1;
-  ImGui::ListBox("##listbox", &item_current, items, IM_ARRAYSIZE(items), 4);
+  ImGui::Combo("##listbox", &item_current, items, IM_ARRAYSIZE(items), 4);
 }
 
 typedef enum { ERROR = 0, WARNING = 1, INFO = 2 } log_type_t;
