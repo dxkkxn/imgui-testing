@@ -296,10 +296,12 @@ void inspector_logs(Mesh *m) {
   ImVec4 colors[] = {ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
                      ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
                      ImVec4(0.0f, 1.0f, 0.0f, 1.0f)};
-  bool check;
+  static bool checkboxes[] = {true, true, true};
   for (int i = 0; i < 3; i++) {
     ImGui::TextColored(colors[i], labels[i]); ImGui::SameLine();
-    ImGui::Checkbox("###i", &check); ImGui::SameLine();
+    char label[64];
+    sprintf(label, "## %s checkbox", labels[i]);
+    ImGui::Checkbox(label, &checkboxes[i]); ImGui::SameLine();
   }
   ImGui::NewLine();
   ImGuiTableFlags flags =
@@ -316,6 +318,8 @@ void inspector_logs(Mesh *m) {
   std::vector<log_t> logs = get_formatted_sorted_logs(m);
 
   for (log_t log : logs) {
+    if (!checkboxes[log.type])
+      continue;
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
     ImGui::Text("%d", log.time);
