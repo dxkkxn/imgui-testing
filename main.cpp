@@ -545,8 +545,6 @@ void my_window(Mesh **meshes, int len) {
   }
 }
 
-bool first_loop = true;
-ImVec2 *positions;
 ed::EditorContext *ed_context;
 
 void node_editor(bool **graph, int n) {
@@ -591,51 +589,44 @@ void node_editor(bool **graph, int n) {
     ed::SetCurrentEditor(ed_context);
     ed::Begin("My Editor", ImVec2(0.0, 0.0f));
     int uniqueId = 1;
-
+    static ImVec2 * positions;
+    static bool first_loop = true;
     if (first_loop) {
       int x = ed::GetScreenSize().x;
       int y = ed::GetScreenSize().y;
-
-      first_loop = false;
-
+      std::cout << x << ' ' << y << std::endl;
       std::random_device rd;
       std::mt19937 gen(rd());
-
       std::uniform_int_distribution<int> dis_x(0, x);
       std::uniform_int_distribution<int> dis_y(0, y);
-
       positions = new ImVec2[n];
       for (int i = 0; i < n; i++) {
         positions[i] = ImVec2(dis_x(gen), dis_y(gen));
       }
-      for (int i = 0; i < n; i++) {
-        ed::BeginNode(uniqueId++);
-        ed::SetNodePosition(uniqueId - 1, positions[i]);
-        ImGui::Text("Node %d", i);
-        ed::BeginPin(uniqueId++, ed::PinKind::Input);
-        ed::EndPin();
-        ed::EndNode();
-      }
-
-    } else {
-      for (int i = 0; i < n; i++) {
-        ed::BeginNode(uniqueId++);
-        ImGui::Text(node_labels[i]);
-        ed::BeginPin(uniqueId++, ed::PinKind::Input);
-        ImGui::Text("Lien");
-        ed::EndPin();
-        ed::EndNode();
-      }
     }
-
-    // ed::Link(uniqueId++, , id_link_j);
     for (int i = 0; i < n; i++) {
+      if (first_loop) {
+        ed::SetNodePosition(uniqueId, positions[i]);
+        std::cout << "ok \n";
+      }
+      ed::BeginNode(uniqueId++);
+      ImGui::Text(node_labels[i]);
+      ed::BeginPin(uniqueId++, ed::PinKind::Input);
+      ImGui::Text("-> In");
+      ed::EndPin();
+      ImGui::SameLine();
+      ed::BeginPin(uniqueId++, ed::PinKind::Output);
+      ImGui::Text("Out ->");
+      ed::EndPin();
+      ed::EndNode();
+    }
+    for (int i = 0; i < n; i++) {
+      int id_link_out_i = 3*i+1+2;
       for (int j = 0; j < n; j++) {
+        int id_link_in_j = 3*j+1+1;
         if (graph[i][j]) {
-          int id_link_i = 2 * i + 2;
-          int id_link_j = 2 * j + 2;
-          ed::Link(uniqueId++, id_link_i, id_link_j);
-          ed::Flow(uniqueId -1); //FlowDirection direction = FlowDirection::Forward);
+          ed::Link(uniqueId++, id_link_out_i, id_link_in_j);
+          // ed::Flow(uniqueId -1); //FlowDirection direction = FlowDirection::Forward);
         }
       }
     }
@@ -645,6 +636,7 @@ void node_editor(bool **graph, int n) {
 
     // ImGui::ShowMetricsWindow();
     ImGui::End();
+    if (first_loop) first_loop=false;
   }
 }
 
