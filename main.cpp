@@ -292,8 +292,8 @@ std::vector<log_t> get_formatted_sorted_logs(Mesh *m) {
 }
 
 void inspector_logs(Mesh *m) {
-  const char *labels[] = {"ERROR", "WARNING", "INFO"};
-  ImVec4 colors[] = {ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
+  static const char *labels[] = {"ERROR", "WARNING", "INFO"};
+  static ImVec4 colors[] = {ImVec4(1.0f, 0.0f, 0.0f, 1.0f),
                      ImVec4(1.0f, 0.5f, 0.0f, 1.0f),
                      ImVec4(0.0f, 1.0f, 0.0f, 1.0f)};
   static bool checkboxes[] = {true, true, true};
@@ -309,7 +309,8 @@ void inspector_logs(Mesh *m) {
     | ImGuiTableFlags_RowBg |
       ImGuiTableFlags_Borders |
       ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable ;
-  if (ImGui::BeginTable("logs table", 3, flags)) {
+  if (ImGui::BeginTable("logs table", 4, flags)) {
+    ImGui::TableSetupColumn("##treenode");
     ImGui::TableSetupColumn("time");
     ImGui::TableSetupColumn("type");
     ImGui::TableSetupColumn("message");
@@ -317,19 +318,39 @@ void inspector_logs(Mesh *m) {
   }
   std::vector<log_t> logs = get_formatted_sorted_logs(m);
 
+  int i = 0;
   for (log_t log : logs) {
     if (!checkboxes[log.type])
       continue;
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
+    char label[64];
+    sprintf(label, "##test %d", i++);
+    bool is_open = ImGui::TreeNodeEx(label, ImGuiTreeNodeFlags_NoTreePushOnOpen);
+    ImGui::TableNextColumn();
     ImGui::Text("%d", log.time);
     ImGui::TableNextColumn();
     ImGui::TextColored(colors[log.type], labels[log.type]);
     ImGui::TableNextColumn();
-    if (ImGui::TreeNodeEx(log.message, ImGuiTreeNodeFlags_NoTreePushOnOpen)) {
-      ImGui::TextWrapped(log.message);
+    ImGui::Text(log.message);
+    if (is_open) {
+      ImGui::EndTable();
+      if (ImGui::BeginTable("message table", 1, ImGuiTableFlags_Borders)) {
+        ImGui::TableSetupColumn("##message", ImGuiTableColumnFlags_WidthStretch);
+        // ImGui::TableSetupColumn("##message");
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::TextWrapped(log.message);
+        ImGui::EndTable();
+      }
+    sprintf(label, "##logs table %d", i-1);
+      ImGui::BeginTable(label, 4, flags);
+      continue;
     }
-    ImGui::TableNextColumn();
+    // if (ImGui::TreeNodeEx(log.message, ImGuiTreeNodeFlags_NoTreePushOnOpen)) {
+    //   ImGui::TextWrapped(log.message);
+    // }
+    // ImGui::TableNextColumn();
   }
   ImGui::EndTable();
 }
