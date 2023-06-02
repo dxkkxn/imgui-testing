@@ -100,10 +100,31 @@ bool **create_random_graph(const int n) {
   std::bernoulli_distribution distribution(0.5);
 
   for (int i = 0; i < n; i++) {
-    for (int j = i; j < n; j++) {
+    for (int j = 0; j < n; j++) {
       graph[i][j] = distribution(gen);
     }
   }
+  return graph;
+}
+
+bool **example_wiki_graph() {
+  int n = 22;
+  bool **graph = new bool *[n];
+  for (int i = 0; i < n; i++) {
+    graph[i] = new bool[n];
+    for (int j= 0; j < n; j++)
+      graph[i][j] = false;
+  }
+  graph[0][1] = graph[0][6] = graph[0][2] = graph[0][4] = true;
+  graph[1][3] = true;
+  graph[3][5] = graph[3][6] = true;
+  graph[2][4] = true;
+  graph[4][7] = graph[4][8] = graph[4][9] = graph[4][10] = graph[4][11] = graph[4][12] = true;
+  graph[9][13] = graph[9][14] = graph[9][15] = true;
+  graph[12][17] = true;
+  graph[13][15] = graph[13][16] = true;
+  graph[15][17] = graph[15][18] = true;
+  graph[16][18] = graph[16][19] = graph[16][20] = graph[16][21] = true;
   return graph;
 }
 
@@ -529,6 +550,28 @@ ImVec2 *positions;
 ed::EditorContext *ed_context;
 
 void node_editor(bool **graph, int n) {
+  static const char *node_labels[] = {"DC++",
+                                      "LinuxDC++",
+                                      "BCDC++",
+                                      "FreeDC++",
+                                      "StrongDC++",
+                                      "BMDC++",
+                                      "EiskaltDC++",
+                                      "AirDC++",
+                                      "zK++",
+                                      "ApexDC++",
+                                      "TkDC++",
+                                      "RSX++",
+                                      "StrongDC++ SQLite",
+                                      "ApexDC++ Speed-Mod",
+                                      "DiCe!++",
+                                      "FlylinkDC++",
+                                      "GreylinkDC++",
+                                      "FlylinkDC++",
+                                      "AvaLink",
+                                      "RayLinkDC++",
+                                      "SparkDC++",
+                                      "PeLink"};
   float size_y = ImGui::GetIO().DisplaySize.y;
   float size_x = ImGui::GetIO().DisplaySize.x;
   float x = (size_x - WINDOW_SIZE) / 2;
@@ -577,7 +620,7 @@ void node_editor(bool **graph, int n) {
     } else {
       for (int i = 0; i < n; i++) {
         ed::BeginNode(uniqueId++);
-        ImGui::Text("Node %d", i);
+        ImGui::Text(node_labels[i]);
         ed::BeginPin(uniqueId++, ed::PinKind::Input);
         ImGui::Text("Lien");
         ed::EndPin();
@@ -587,11 +630,12 @@ void node_editor(bool **graph, int n) {
 
     // ed::Link(uniqueId++, , id_link_j);
     for (int i = 0; i < n; i++) {
-      for (int j = i; j < n; j++) {
+      for (int j = 0; j < n; j++) {
         if (graph[i][j]) {
           int id_link_i = 2 * i + 2;
           int id_link_j = 2 * j + 2;
           ed::Link(uniqueId++, id_link_i, id_link_j);
+          ed::Flow(uniqueId -1); //FlowDirection direction = FlowDirection::Forward);
         }
       }
     }
@@ -656,7 +700,8 @@ int main(int, char **) {
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init();
 
-  bool **graph = create_random_graph(10);
+  // bool **graph = create_random_graph(10);
+  bool ** graph = example_wiki_graph();
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
@@ -665,7 +710,7 @@ int main(int, char **) {
 
     // Create your ImGui UI here
     my_window(meshes, 10);
-    node_editor(graph, 10);
+    node_editor(graph, 22);
     ImGui::ShowDemoWindow();
     ImPlot::ShowDemoWindow();
 
