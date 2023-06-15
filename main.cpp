@@ -584,13 +584,17 @@ void my_window(Mesh **meshes, int len) {
 
 #define MARGIN_X 50
 #define MARGIN_Y 20
-std::unordered_map<int, ImVec2>  compute_coords(std::unordered_map<int, std::vector<int>> map) {
+std::unordered_map<int, ImVec2>  compute_coords(std::unordered_map<int, std::vector<int>> map, graph_t& graph) {
   std::vector<int> layers_sizes(map.size() + 1); // llayers start at 1
   int max_size_layer = 0;
   int max_layer = 0;
   for (const auto& pair : map) {
     int res = 0;
     for (int node: pair.second) {
+      if (graph.isInvisible(node)) {
+        res += 100;
+        continue;
+      }
       ImVec2 size = ed::GetNodeSize(node*3+1);
       res += size.y + MARGIN_Y;
     }
@@ -605,7 +609,6 @@ std::unordered_map<int, ImVec2>  compute_coords(std::unordered_map<int, std::vec
   std::unordered_map<int, ImVec2> coords;
   int x = 0;
   for (int layer = 1; layer < map.size()+1; layer++) {
-    std::cout << "layer: " << layer << " size: " << map.size() << std::endl;
     int size_y = layers_sizes.at(layer);
     int y = (max_size_layer - size_y) / 2; // center the y coord of the current layer
     int max_x_node = 0;
@@ -641,6 +644,7 @@ std::unordered_map<int, ImVec2>  compute_coords(std::unordered_map<int, std::vec
   // }
   return coords;
 }
+
 ed::EditorContext *ed_context;
 
 
@@ -681,26 +685,21 @@ void node_editor(graph_t graph) {
       ImGui::Text("Out ->");
       ed::EndPin();
       ed::EndNode();
-      std::cout << graph.labels.at(node) << std::endl;
     }
 
-    std::cout << "start for each" << std::endl;
     std::for_each(graph.nodes.begin(), graph.nodes.end(),
       [&uniqueId, &graph](const auto &pair) {
         int start;
         std::vector<int> neighbours;
         boost::tie(start, neighbours) = pair;
         int startId = 3 * start + 1 + 2;// +1 bc uniqueId starts at 1 because inid is neighid + 2
-        std::cout << "start: " << graph.labels.at(start) << "{ ";
         std::for_each(neighbours.begin(), neighbours.end(),
           [&startId, &uniqueId](const int neigh) {
             int endId = 3 * neigh + 1 + 1; // +1 1 bc uniqueId starts at 1 because inid is neighid + 1
             if (endId == 2 || startId == 2) exit(0);
             ed::Link(uniqueId++, startId, endId);
         });
-        std::cout << "}" << std::endl;
       });
-    std::cout << "end for each" << std::endl;
     // ed::BeginNode(uniqueId++);
     // ed::SetInvisible(uniqueId-1);
     // ed::BeginPin(uniqueId++, ed::PinKind::Input);
@@ -714,7 +713,8 @@ void node_editor(graph_t graph) {
       int n = graph.nodes.size();
       positions = new ImVec2[n];
       std::unordered_map<int, std::vector<int>> layers = compute_layout(graph);
-      std::unordered_map<int, ImVec2> coords = compute_coords(layers);
+      std::unordered_map<int, ImVec2> coords = compute_coords(layers, graph);
+
       int x = 0, y = 0;
 
       for (const auto &[node, coord]: coords) {
