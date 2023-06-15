@@ -1,7 +1,9 @@
+#define IMGUI_DEFINE_MATH_OPERATORS
 #include "backends/imgui_impl_glfw.h"
 #include "backends/imgui_impl_opengl3.h"
 #include "imgui.h"
 #include "imgui_node_editor.h"
+#include "imgui_node_editor_internal.h"
 #include "implot.h"
 #include <GLFW/glfw3.h> // Will drag system OpenGL headers
 #include <cstdio>
@@ -15,6 +17,8 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include "graph_layout.h"
+#include <boost/range/combine.hpp>
 
 #define WINDOW_SIZE 300
 
@@ -82,7 +86,7 @@ bool MyTreeNode(const char *label) {
   ImGui::ColorButton("buttton",
                      opened ? ImColor(255, 0, 0) : ImColor(0, 255, 0));
   ImGui::SameLine();
-  ImGui::Text(label);
+  ImGui::Text("%s", label);
   ImGui::EndGroup();
   if (opened)
     ImGui::TreePush(label);
@@ -107,25 +111,53 @@ bool **create_random_graph(const int n) {
   return graph;
 }
 
-bool **example_wiki_graph() {
-  int n = 22;
-  bool **graph = new bool *[n];
-  for (int i = 0; i < n; i++) {
-    graph[i] = new bool[n];
-    for (int j= 0; j < n; j++)
-      graph[i][j] = false;
-  }
-  graph[0][1] = graph[0][6] = graph[0][2] = graph[0][4] = true;
-  graph[1][3] = true;
-  graph[3][5] = graph[3][6] = true;
-  graph[2][4] = true;
-  graph[4][7] = graph[4][8] = graph[4][9] = graph[4][10] = graph[4][11] = graph[4][12] = true;
-  graph[9][13] = graph[9][14] = graph[9][15] = true;
-  graph[12][17] = true;
-  graph[13][15] = graph[13][16] = true;
-  graph[15][17] = graph[15][18] = true;
-  graph[16][18] = graph[16][19] = graph[16][20] = graph[16][21] = true;
-  return graph;
+graph_t example_wiki_graph() {
+  const char * labels[] = {"DC++",
+                         "LinuxDC++",
+                         "BCDC++",
+                         "FreeDC++",
+                         "StrongDC++",
+                         "BMDC++",
+                         "EiskaltDC++",
+                         "AirDC++",
+                         "zK++",
+                         "ApexDC++",
+                         "TkDC++",
+                         "RSX++",
+                         "StrongDC++ SQLite",
+                         "ApexDC++ Speed-Mod",
+                         "DiCe!++",
+                         "FlylinkDC++",
+                         "GreylinkDC++",
+                         "FlylinkDC++",
+                         "AvaLink",
+                         "RayLinkDC++",
+                         "SparkDC++",
+                         "PeLink"};
+
+  graph_t new_graph(labels, 22);
+  // new_graph.labels = std::vector<std::string>(node_labels, node_labels+22);
+  // graph[0][1] = graph[0][6] = graph[0][2] = graph[0][4] = true;
+  new_graph.nodes[0] = {1,2,4,6};
+  // graph[1][3] = true;
+  new_graph.nodes[1] = {3};
+  // graph[3][5] = graph[3][6] = true;
+  new_graph.nodes[3] = {5, 6};
+  // graph[2][4] = true;
+  new_graph.nodes[2] = {4};
+  // graph[4][7] = graph[4][8] = graph[4][9] = graph[4][10] = graph[4][11] = graph[4][12] = true;
+  new_graph.nodes[4] = {7, 8, 9, 10, 11, 12};
+  // graph[9][13] = graph[9][14] = graph[9][15] = true;
+  new_graph.nodes[9] = {13, 14, 15};
+  // graph[12][17] = true;
+  new_graph.nodes[12] = {17};
+  // graph[13][15] = graph[13][16] = true;
+  new_graph.nodes[13] = {15, 16};
+  // graph[15][17] = graph[15][18] = true;
+  new_graph.nodes[15] = {17, 18};
+  // graph[16][18] = graph[16][19] = graph[16][20] = graph[16][21] = true;
+  new_graph.nodes[16] = {18, 19, 20, 21};
+  return new_graph;
 }
 
 std::string generateLoremIpsum(int numWords) {
@@ -545,31 +577,53 @@ void my_window(Mesh **meshes, int len) {
   }
 }
 
+
+#define MARGIN_X 20
+#define MARGIN_Y 50
+std::unordered_map<int, int>  compute_x_coord(std::unordered_map<int, std::vector<int>> map) {
+  std::unordered_map<int, int> layers_sizes;
+  int max_size_layer = 0;
+  int max_layer = 0;
+  for (const auto& pair : map) {
+    int res = 0;
+    for (int node: pair.second) {
+      ImVec2 size = ed::GetNodeSize(node*3+1);
+      res += size.x + MARGIN_X;
+    }
+    std::cout << pair.first << std::endl;
+    layers_sizes[pair.first] = res;
+    if (res > max_size_layer) {
+      max_size_layer = res;
+      max_layer = pair.first;
+    }
+  }
+
+  std::unordered_map<int, int> layer_x_coord;
+  int prev_size = max_size_layer;
+  layer_x_coord[max_layer] = 0;
+  for (const auto& pair : layers_sizes) {
+    int layer = pair.first;
+    int size = pair.second;
+    layer_x_coord[layer] = (max_size_layer - layers_sizes[layer]) / 2;
+  }
+  // for (int i = max_layer - 1; i >= 1; i--) {
+  //   std::cout << "prev_size: " << prev_size << std::endl;
+  //   std::cout << "layers_sizes[i]: " <<  layers_sizes[i] << " i: "<< i << std::endl;
+  //   std::cout << "res: " << (prev_size - layers_sizes[i]) / 2 << std::endl;
+  //   layer_x_coord[i] = (prev_size - layers_sizes[i]) / 2 + layer_x_coord[i+1];
+  //   prev_size = layers_sizes[i];
+  // }
+  // prev_size = max_size_layer;
+  // for (int i = max_layer + 1; i < map.size() + 1; i++) {
+  //   layer_x_coord[i] = (prev_size - layers_sizes[i]) / 2;
+  //   prev_size = layers_sizes[i];
+  // }
+  return layer_x_coord;
+}
 ed::EditorContext *ed_context;
 
-void node_editor(bool **graph, int n) {
-  static const char *node_labels[] = {"DC++",
-                                      "LinuxDC++",
-                                      "BCDC++",
-                                      "FreeDC++",
-                                      "StrongDC++",
-                                      "BMDC++",
-                                      "EiskaltDC++",
-                                      "AirDC++",
-                                      "zK++",
-                                      "ApexDC++",
-                                      "TkDC++",
-                                      "RSX++",
-                                      "StrongDC++ SQLite",
-                                      "ApexDC++ Speed-Mod",
-                                      "DiCe!++",
-                                      "FlylinkDC++",
-                                      "GreylinkDC++",
-                                      "FlylinkDC++",
-                                      "AvaLink",
-                                      "RayLinkDC++",
-                                      "SparkDC++",
-                                      "PeLink"};
+
+void node_editor(graph_t graph) {
   float size_y = ImGui::GetIO().DisplaySize.y;
   float size_x = ImGui::GetIO().DisplaySize.x;
   float x = (size_x - WINDOW_SIZE) / 2;
@@ -587,48 +641,72 @@ void node_editor(bool **graph, int n) {
     ImGui::Separator();
 
     ed::SetCurrentEditor(ed_context);
+
     ed::Begin("My Editor", ImVec2(0.0, 0.0f));
     int uniqueId = 1;
     static ImVec2 * positions;
     static bool first_loop = true;
+
+    std::for_each(graph.nodes.begin(), graph.nodes.end(),
+      [&uniqueId, &graph](const auto &pair) {
+        int node;
+        std::vector<int> neighbours;
+        boost::tie(node, neighbours) = pair;
+        ed::BeginNode(uniqueId++);
+        ImGui::Text("%s", graph.labels.at(node));
+        ed::BeginPin(uniqueId++, ed::PinKind::Input);
+        ImGui::Text("-> In");
+        ed::EndPin();
+        ImGui::SameLine();
+        ed::BeginPin(uniqueId++, ed::PinKind::Output);
+        ImGui::Text("Out ->");
+        ed::EndPin();
+        ed::EndNode();
+      });
+
+    std::for_each(graph.nodes.begin(), graph.nodes.end(),
+      [&uniqueId, &graph](const auto &pair) {
+        int start;
+        std::vector<int> neighbours;
+        boost::tie(start, neighbours) = pair;
+        int startId = 3 * start + 1 + 2;// +1 bc uniqueId starts at 1 because inid is neighid + 2
+        std::for_each(neighbours.begin(), neighbours.end(),
+          [&startId, &uniqueId](const int neigh) {
+            int endId = 3 * neigh + 1 + 1; // +1 1 bc uniqueId starts at 1 because inid is neighid + 1
+            ed::Link(uniqueId++, startId, endId);
+        });
+      });
+    ed::BeginNode(uniqueId++);
+    ed::SetInvisible(uniqueId-1);
+    ed::BeginPin(uniqueId++, ed::PinKind::Input);
+    ed::EndPin();
+    ed::EndNode();
+    ed::Link(uniqueId, 2, uniqueId-1);
+    uniqueId++;
+
     if (first_loop) {
-      int x = ed::GetScreenSize().x;
-      int y = ed::GetScreenSize().y;
-      std::cout << x << ' ' << y << std::endl;
-      std::random_device rd;
-      std::mt19937 gen(rd());
-      std::uniform_int_distribution<int> dis_x(0, x);
-      std::uniform_int_distribution<int> dis_y(0, y);
+
+      int n = graph.nodes.size();
       positions = new ImVec2[n];
-      for (int i = 0; i < n; i++) {
-        positions[i] = ImVec2(dis_x(gen), dis_y(gen));
-      }
-    }
-    for (int i = 0; i < n; i++) {
-      if (first_loop) {
-        ed::SetNodePosition(uniqueId, positions[i]);
-        std::cout << "ok \n";
-      }
-      ed::BeginNode(uniqueId++);
-      ImGui::Text(node_labels[i]);
-      ed::BeginPin(uniqueId++, ed::PinKind::Input);
-      ImGui::Text("-> In");
-      ed::EndPin();
-      ImGui::SameLine();
-      ed::BeginPin(uniqueId++, ed::PinKind::Output);
-      ImGui::Text("Out ->");
-      ed::EndPin();
-      ed::EndNode();
-    }
-    for (int i = 0; i < n; i++) {
-      int id_link_out_i = 3*i+1+2;
-      for (int j = 0; j < n; j++) {
-        int id_link_in_j = 3*j+1+1;
-        if (graph[i][j]) {
-          ed::Link(uniqueId++, id_link_out_i, id_link_in_j);
-          // ed::Flow(uniqueId -1); //FlowDirection direction = FlowDirection::Forward);
+      std::unordered_map<int, std::vector<int>> map = compute_layout(graph);
+      std::unordered_map<int, int> x_coords =  compute_x_coord(map);
+      int x = 0, y = 0;
+
+      for (int i = 1; i < map.size() + 1; i++ ) {
+        int layer = i;
+        x = x_coords[layer];
+        int max_y = 0;
+        std::cout << "layer: " << layer << std::endl;
+        for (int node: map[layer]) {
+          std::cout << node << std::endl;
+          ed::SetNodePosition(node*3+1, ImVec2(x, y));
+          ImVec2 size = ed::GetNodeSize(node*3+1);
+          if (size.y > max_y) max_y = size.y;
+          x += size.x + MARGIN_X;
         }
+        y += max_y + MARGIN_Y;
       }
+      first_loop=false;
     }
 
     ed::End();
@@ -636,7 +714,6 @@ void node_editor(bool **graph, int n) {
 
     // ImGui::ShowMetricsWindow();
     ImGui::End();
-    if (first_loop) first_loop=false;
   }
 }
 
@@ -657,7 +734,7 @@ int main(int, char **) {
   // Initialize GLFW and create a window
   glfwInit();
   GLFWwindow *window =
-      glfwCreateWindow(800, 600, "ImGui Window", nullptr, nullptr);
+      glfwCreateWindow(1920, 1080, "ImGui Window", nullptr, nullptr);
   glfwMakeContextCurrent(window);
 
   // Initialize ImGui for GLFW and OpenGL
@@ -693,7 +770,7 @@ int main(int, char **) {
   ImGui_ImplOpenGL3_Init();
 
   // bool **graph = create_random_graph(10);
-  bool ** graph = example_wiki_graph();
+  graph_t graph = example_wiki_graph();
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
@@ -702,7 +779,7 @@ int main(int, char **) {
 
     // Create your ImGui UI here
     my_window(meshes, 10);
-    node_editor(graph, 22);
+    node_editor(graph);
     ImGui::ShowDemoWindow();
     ImPlot::ShowDemoWindow();
 

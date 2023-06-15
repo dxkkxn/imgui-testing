@@ -6,7 +6,8 @@
 
 IMGUI_DIR = ./imgui
 IMPLOT_DIR = ./implot
-CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(IMPLOT_DIR)
+NODE_EDITOR_DIR = ./imgui-node-editor
+CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(IMPLOT_DIR) -I$(NODE_EDITOR_DIR)
 CXXFLAGS += -g -Wall -Wformat
 
 # main: main.cpp
@@ -26,6 +27,11 @@ SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
 # adding implot to sources
 SOURCES += $(IMPLOT_DIR)/implot.cpp $(IMPLOT_DIR)/implot_demo.cpp $(IMPLOT_DIR)/implot_items.cpp
+SOURCES += $(NODE_EDITOR_DIR)/imgui_node_editor.cpp \
+$(NODE_EDITOR_DIR)/imgui_extra_math.inl $(NODE_EDITOR_DIR)/crude_json.cpp \
+$(NODE_EDITOR_DIR)/imgui_node_editor_api.cpp $(NODE_EDITOR_DIR)/imgui_canvas.cpp \
+$(NODE_EDITOR_DIR)/imgui_bezier_math.inl #$(NODE_EDITOR_DIR)/imgui_canvas.cpp
+
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 
 ECHO_MESSAGE = "Linux"
@@ -42,6 +48,10 @@ CFLAGS = $(CXXFLAGS)
 	g++ $(CXXFLAGS) -c -o $@ $<
 
 %.o:$(IMPLOT_DIR)/%.cpp
+	g++ $(CXXFLAGS) -c -o $@ $<
+
+
+%.o:$(NODE_EDITOR_DIR)/%.cpp
 	g++ $(CXXFLAGS) -c -o $@ $<
 
 # %.o: $(IMGUI_DIR)/backends/imgui_imp_glfw.cpp $(IMGUI_DIR)/backends/imgui_imp_opengl3.cpp

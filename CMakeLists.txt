@@ -9,7 +9,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 
-set(CMAKE_CXX_STANDARD            14)
+set(CMAKE_CXX_STANDARD            17)
 set(CMAKE_CXX_STANDARD_REQUIRED   YES)
 
 add_subdirectory(external/imgui)
@@ -22,7 +22,7 @@ list(APPEND LIBS imgui-node-editor)
 # list(APPEND INCLUDES "${PROJECT_SOURCE_DIR}/imgui/imgui")
 # list(APPEND INCLUDES "${PROJECT_SOURCE_DIR}/imgui-node-editor/imgui-node-editor")
 
-add_executable(main main.cpp)
+add_executable(main main.cpp graph_layout.cpp)
 
 # target_include_directories(main PUBLIC "${INCLUDES}")
 
