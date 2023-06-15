@@ -114,22 +114,26 @@ bool **create_random_graph(const int n) {
 graph_t example_wiki_graph() {
   const char * labels[] = {"DC++",
                          "LinuxDC++",
+
                          "BCDC++",
                          "FreeDC++",
                          "StrongDC++",
                          "BMDC++",
                          "EiskaltDC++",
+
                          "AirDC++",
                          "zK++",
                          "ApexDC++",
                          "TkDC++",
                          "RSX++",
+
                          "StrongDC++ SQLite",
                          "ApexDC++ Speed-Mod",
                          "DiCe!++",
-                         "FlylinkDC++",
+                         "FlylinkDC++ \n ver <= 4xx",
                          "GreylinkDC++",
-                         "FlylinkDC++",
+
+                         "FlylinkDC++ \n ver >= 5xx",
                          "AvaLink",
                          "RayLinkDC++",
                          "SparkDC++",
@@ -578,34 +582,51 @@ void my_window(Mesh **meshes, int len) {
 }
 
 
-#define MARGIN_X 20
-#define MARGIN_Y 50
-std::unordered_map<int, int>  compute_x_coord(std::unordered_map<int, std::vector<int>> map) {
-  std::unordered_map<int, int> layers_sizes;
+#define MARGIN_X 50
+#define MARGIN_Y 20
+std::unordered_map<int, ImVec2>  compute_coords(std::unordered_map<int, std::vector<int>> map) {
+  std::vector<int> layers_sizes(map.size() + 1); // llayers start at 1
   int max_size_layer = 0;
   int max_layer = 0;
   for (const auto& pair : map) {
     int res = 0;
     for (int node: pair.second) {
       ImVec2 size = ed::GetNodeSize(node*3+1);
-      res += size.x + MARGIN_X;
+      res += size.y + MARGIN_Y;
     }
-    std::cout << pair.first << std::endl;
-    layers_sizes[pair.first] = res;
+    layers_sizes.at(pair.first) = res;
     if (res > max_size_layer) {
       max_size_layer = res;
       max_layer = pair.first;
     }
   }
 
-  std::unordered_map<int, int> layer_x_coord;
-  int prev_size = max_size_layer;
-  layer_x_coord[max_layer] = 0;
-  for (const auto& pair : layers_sizes) {
-    int layer = pair.first;
-    int size = pair.second;
-    layer_x_coord[layer] = (max_size_layer - layers_sizes[layer]) / 2;
+
+  std::unordered_map<int, ImVec2> coords;
+  int x = 0;
+  for (int layer = 1; layer < map.size()+1; layer++) {
+    std::cout << "layer: " << layer << " size: " << map.size() << std::endl;
+    int size_y = layers_sizes.at(layer);
+    int y = (max_size_layer - size_y) / 2; // center the y coord of the current layer
+    int max_x_node = 0;
+    for (const int& node: map.at(layer)) {
+      coords[node] = ImVec2(x, y);
+      ImVec2 size = ed::GetNodeSize(node*3+1);
+      y += size.y + MARGIN_Y;
+      if (size.x > max_x_node)
+        max_x_node = size.x;
+    }
+    x += max_x_node + MARGIN_X;
   }
+
+  // std::unordered_map<int, int> layer_x_coord;
+  // int prev_size = max_size_layer;
+  // layer_x_coord[max_layer] = 0;
+  // for (const auto& pair : layers_sizes) {
+  //   int layer = pair.first;
+  //   int size = pair.second;
+  //   layer_x_coord[layer] = (max_size_layer - layers_sizes[layer]) / 2;
+  // }
   // for (int i = max_layer - 1; i >= 1; i--) {
   //   std::cout << "prev_size: " << prev_size << std::endl;
   //   std::cout << "layers_sizes[i]: " <<  layers_sizes[i] << " i: "<< i << std::endl;
@@ -618,7 +639,7 @@ std::unordered_map<int, int>  compute_x_coord(std::unordered_map<int, std::vecto
   //   layer_x_coord[i] = (prev_size - layers_sizes[i]) / 2;
   //   prev_size = layers_sizes[i];
   // }
-  return layer_x_coord;
+  return coords;
 }
 ed::EditorContext *ed_context;
 
@@ -647,64 +668,57 @@ void node_editor(graph_t graph) {
     static ImVec2 * positions;
     static bool first_loop = true;
 
-    std::for_each(graph.nodes.begin(), graph.nodes.end(),
-      [&uniqueId, &graph](const auto &pair) {
-        int node;
-        std::vector<int> neighbours;
-        boost::tie(node, neighbours) = pair;
-        ed::BeginNode(uniqueId++);
-        ImGui::Text("%s", graph.labels.at(node));
-        ed::BeginPin(uniqueId++, ed::PinKind::Input);
-        ImGui::Text("-> In");
-        ed::EndPin();
-        ImGui::SameLine();
-        ed::BeginPin(uniqueId++, ed::PinKind::Output);
-        ImGui::Text("Out ->");
-        ed::EndPin();
-        ed::EndNode();
-      });
+    for (int i = 0; i < graph.size(); i++) {
+      int node = i;
+      std::vector<int> neighbours = graph.nodes.at(i);
+      ed::BeginNode(uniqueId++);
+      ImGui::Text("%s", graph.labels.at(node));
+      ed::BeginPin(uniqueId++, ed::PinKind::Input);
+      ImGui::Text("-> In");
+      ed::EndPin();
+      ImGui::SameLine();
+      ed::BeginPin(uniqueId++, ed::PinKind::Output);
+      ImGui::Text("Out ->");
+      ed::EndPin();
+      ed::EndNode();
+      std::cout << graph.labels.at(node) << std::endl;
+    }
 
+    std::cout << "start for each" << std::endl;
     std::for_each(graph.nodes.begin(), graph.nodes.end(),
       [&uniqueId, &graph](const auto &pair) {
         int start;
         std::vector<int> neighbours;
         boost::tie(start, neighbours) = pair;
         int startId = 3 * start + 1 + 2;// +1 bc uniqueId starts at 1 because inid is neighid + 2
+        std::cout << "start: " << graph.labels.at(start) << "{ ";
         std::for_each(neighbours.begin(), neighbours.end(),
           [&startId, &uniqueId](const int neigh) {
             int endId = 3 * neigh + 1 + 1; // +1 1 bc uniqueId starts at 1 because inid is neighid + 1
+            if (endId == 2 || startId == 2) exit(0);
             ed::Link(uniqueId++, startId, endId);
         });
+        std::cout << "}" << std::endl;
       });
-    ed::BeginNode(uniqueId++);
-    ed::SetInvisible(uniqueId-1);
-    ed::BeginPin(uniqueId++, ed::PinKind::Input);
-    ed::EndPin();
-    ed::EndNode();
-    ed::Link(uniqueId, 2, uniqueId-1);
-    uniqueId++;
+    std::cout << "end for each" << std::endl;
+    // ed::BeginNode(uniqueId++);
+    // ed::SetInvisible(uniqueId-1);
+    // ed::BeginPin(uniqueId++, ed::PinKind::Input);
+    // ed::EndPin();
+    // ed::EndNode();
+    // ed::Link(uniqueId, 2, uniqueId-1);
+    // uniqueId++;
 
     if (first_loop) {
 
       int n = graph.nodes.size();
       positions = new ImVec2[n];
-      std::unordered_map<int, std::vector<int>> map = compute_layout(graph);
-      std::unordered_map<int, int> x_coords =  compute_x_coord(map);
+      std::unordered_map<int, std::vector<int>> layers = compute_layout(graph);
+      std::unordered_map<int, ImVec2> coords = compute_coords(layers);
       int x = 0, y = 0;
 
-      for (int i = 1; i < map.size() + 1; i++ ) {
-        int layer = i;
-        x = x_coords[layer];
-        int max_y = 0;
-        std::cout << "layer: " << layer << std::endl;
-        for (int node: map[layer]) {
-          std::cout << node << std::endl;
-          ed::SetNodePosition(node*3+1, ImVec2(x, y));
-          ImVec2 size = ed::GetNodeSize(node*3+1);
-          if (size.y > max_y) max_y = size.y;
-          x += size.x + MARGIN_X;
-        }
-        y += max_y + MARGIN_Y;
+      for (const auto &[node, coord]: coords) {
+        ed::SetNodePosition(node*3+1, coord);
       }
       first_loop=false;
     }
