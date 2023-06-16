@@ -584,6 +584,7 @@ void my_window(Mesh **meshes, int len) {
 
 #define MARGIN_X 50
 #define MARGIN_Y 20
+#define INVISIBLE_NODE_SIZE 200
 std::unordered_map<int, ImVec2>  compute_coords(std::unordered_map<int, std::vector<int>> map, graph_t& graph) {
   std::vector<int> layers_sizes(map.size() + 1); // llayers start at 1
   int max_size_layer = 0;
@@ -591,10 +592,10 @@ std::unordered_map<int, ImVec2>  compute_coords(std::unordered_map<int, std::vec
   for (const auto& pair : map) {
     int res = 0;
     for (int node: pair.second) {
-      if (graph.isInvisible(node)) {
-        res += 100;
-        continue;
-      }
+      // if (graph.isInvisible(node)) {
+      //   res += INVISIBLE_NODE_SIZE + MARGIN_Y;
+      //   continue;
+      // }
       ImVec2 size = ed::GetNodeSize(node*3+1);
       res += size.y + MARGIN_Y;
     }
@@ -613,8 +614,12 @@ std::unordered_map<int, ImVec2>  compute_coords(std::unordered_map<int, std::vec
     int y = (max_size_layer - size_y) / 2; // center the y coord of the current layer
     int max_x_node = 0;
     for (const int& node: map.at(layer)) {
+      // if (graph.isInvisible(node)) {
+      //   ImVec2 size = ImVec2(200, 100);
+      // } else {
+        ImVec2 size = ed::GetNodeSize(node*3+1);
+      // }
       coords[node] = ImVec2(x, y);
-      ImVec2 size = ed::GetNodeSize(node*3+1);
       y += size.y + MARGIN_Y;
       if (size.x > max_x_node)
         max_x_node = size.x;
@@ -648,7 +653,7 @@ std::unordered_map<int, ImVec2>  compute_coords(std::unordered_map<int, std::vec
 ed::EditorContext *ed_context;
 
 
-void node_editor(graph_t graph) {
+void node_editor(graph_t& graph) {
   float size_y = ImGui::GetIO().DisplaySize.y;
   float size_x = ImGui::GetIO().DisplaySize.x;
   float x = (size_x - WINDOW_SIZE) / 2;
@@ -671,11 +676,31 @@ void node_editor(graph_t graph) {
     int uniqueId = 1;
     static ImVec2 * positions;
     static bool first_loop = true;
+    std::unordered_map<int, std::vector<int>> layers;
+    if (first_loop) {
+      std::cout << "here: ";
+      print_vec(graph.nodes.at(0));
+      layers = compute_layout(graph);
+      std::cout << "end here: ";
+      print_vec(graph.nodes.at(0));
+    }
 
     for (int i = 0; i < graph.size(); i++) {
       int node = i;
-      std::vector<int> neighbours = graph.nodes.at(i);
       ed::BeginNode(uniqueId++);
+      if (graph.isInvisible(node)) {
+        ed::SetInvisible(uniqueId-1);
+        // ImGui::Text("im invisible");
+        // ImGui::Text("-> In");
+        ed::BeginPin(uniqueId++, ed::PinKind::Input);
+        ed::EndPin();
+        ImGui::SameLine();
+        ed::BeginPin(uniqueId++, ed::PinKind::Output);
+        // ImGui::Text("Out ->");
+        ed::EndPin();
+        ed::EndNode();
+        continue;
+      }
       ImGui::Text("%s", graph.labels.at(node));
       ed::BeginPin(uniqueId++, ed::PinKind::Input);
       ImGui::Text("-> In");
@@ -693,6 +718,9 @@ void node_editor(graph_t graph) {
         std::vector<int> neighbours;
         boost::tie(start, neighbours) = pair;
         int startId = 3 * start + 1 + 2;// +1 bc uniqueId starts at 1 because inid is neighid + 2
+        // if (graph.isInvisible(start)) {
+        //   startId = 3 * start + 1 + 1;// +1 bc uniqueId starts at 1 because inid is neighid + 2
+        // }
         std::for_each(neighbours.begin(), neighbours.end(),
           [&startId, &uniqueId](const int neigh) {
             int endId = 3 * neigh + 1 + 1; // +1 1 bc uniqueId starts at 1 because inid is neighid + 1
@@ -709,14 +737,7 @@ void node_editor(graph_t graph) {
     // uniqueId++;
 
     if (first_loop) {
-
-      int n = graph.nodes.size();
-      positions = new ImVec2[n];
-      std::unordered_map<int, std::vector<int>> layers = compute_layout(graph);
       std::unordered_map<int, ImVec2> coords = compute_coords(layers, graph);
-
-      int x = 0, y = 0;
-
       for (const auto &[node, coord]: coords) {
         ed::SetNodePosition(node*3+1, coord);
       }
