@@ -68,7 +68,7 @@ std::vector<int> layer_assignment(graph_t graph) {
   return assignment;
 }
 
-void print_vec(std::vector<int>& vec) {
+void print_vec(std::vector<int> &vec) {
   for (const auto &element : vec) {
     std::cout << element << " ";
   }
@@ -77,7 +77,7 @@ void print_vec(std::vector<int>& vec) {
 
 void insert_invisible_nodes(graph_t &graph,
                             std::unordered_map<int, std::vector<int>> &layer,
-                            std::vector<int>assignement) {
+                            std::vector<int> assignement) {
   assert(layer.at(1).size() == 1);
   int root_node = layer.at(1).at(0);
   std::deque<int> deque = {root_node};
@@ -116,14 +116,70 @@ void insert_invisible_nodes(graph_t &graph,
   std::cout << "end func" << std::endl;
 }
 
-std::unordered_map<int, std::vector<int>> compute_layout(graph_t& graph) {
+
+// std::vector<std::vector<int>> permuations(std::vector<int> vec) {
+
+// }
+
+int compute_crossing_edges(int layer,
+                           std::unordered_map<int, std::vector<int>> layers, graph_t graph);
+
+std::unordered_map<int, std::vector<int>> compute_layout(graph_t &graph) {
   // find_root_node(graph);
-  std::vector<int>assignment = layer_assignment(graph);
+  std::vector<int> assignment = layer_assignment(graph);
   std::unordered_map<int, std::vector<int>> map;
   for (int i = 0; i < graph.nodes.size(); i++) {
     map[assignment[i]].push_back(i);
   }
   int root = find_root_node(graph);
   insert_invisible_nodes(graph, map, assignment);
+  for (int layer = 1; layer < map.size(); layer++) {
+    std::vector<int>& layer_nodes = map.at(layer);
+    std::sort(layer_nodes.begin(), layer_nodes.end());
+    auto minVec = layer_nodes;
+    int minValue = compute_crossing_edges(layer, map, graph);
+    while (std::next_permutation(layer_nodes.begin(), layer_nodes.end())) {
+      int currValue = compute_crossing_edges(layer, map, graph);
+      if (currValue < minValue) {
+        minValue = currValue;
+        minVec = layer_nodes;
+      }
+    }
+    map[layer] = minVec;
+    // std::cout << "layer: " << layer
+    //           << ", crossing edges: " << compute_crossing_edges(layer, map, graph)
+    //           << std::endl;
+
+  }
   return map;
+}
+
+
+
+// computes the number of crossing between layer and layer + 1;
+int compute_crossing_edges(int layer,
+                           std::unordered_map<int, std::vector<int>> layers, graph_t graph) {
+  auto exists_edge = [&graph](int src, int dest) {
+    auto it = find(graph.nodes.at(src).begin(), graph.nodes.at(src).end(), dest);
+    if (it == graph.nodes.at(src).end())
+      return false;
+    return true; // Edge exist
+  };
+  assert(layer >= 1 and layers.find(layer) != layers.end());
+  auto ncl = layers.at(layer); // nodes current layer (ncl)
+  auto nnl = layers.at(layer + 1); // nodes next layer (nnl)
+  int count = 0;
+  for (int i = 0; i < ncl.size(); i++) {
+    for (int j = 0; j < nnl.size(); j++) {
+      // ncl[i] ->  nnl[j]
+      if (!exists_edge(ncl[i], nnl[j])) continue;
+      for (int k = i + 1; k < ncl.size(); k++) {
+        for (int l = 0; l < j; l++) {
+          if (exists_edge(ncl[k], nnl[l]))
+            count++;
+        }
+      }
+    }
+  }
+  return count;
 }
