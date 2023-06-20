@@ -124,6 +124,48 @@ void insert_invisible_nodes(graph_t &graph,
 int compute_crossing_edges(int layer,
                            std::unordered_map<int, std::vector<int>> layers, graph_t graph);
 
+int compute_crossing_edges_in_all_graph(
+                           std::unordered_map<int, std::vector<int>> layers, graph_t graph);
+
+int min = -1;
+// std::vector<int>
+std::unordered_map<int, std::vector<int>> best_map;
+void combinatorics(int layer, std::unordered_map<int, std::vector<int>> map,
+                   graph_t graph) {
+  std::cout << "layer:" << layer << std::endl;
+  if (layer > map.size()) {
+    int crossing_edges = compute_crossing_edges_in_all_graph(map, graph);
+    // std::cout << "ce: " << crossing_edges << std::endl;
+    // std::cout << "min: " << min << std::endl;
+    if (min > crossing_edges) {
+      min = crossing_edges;
+      best_map.clear();
+      for (const auto &pair : map) {
+        int key = pair.first;
+        const std::vector<int> &originalVector = pair.second;
+
+        // Create a copy of the vector
+        std::vector<int> copyVector(originalVector.begin(),
+                                    originalVector.end());
+
+        // Add the copy to the copy map
+        best_map[key] = copyVector;
+        std::cout << "oooook" << std::endl;
+      }
+    }
+    return;
+  }
+  std::vector<int> &layer_nodes = map.at(layer);
+  if (layer_nodes.size() == 1) {
+    combinatorics(layer + 1, map, graph);
+
+  } else {
+    while (std::next_permutation(layer_nodes.begin(), layer_nodes.end())) {
+      combinatorics(layer + 1, map, graph);
+    }
+  }
+}
+
 std::unordered_map<int, std::vector<int>> compute_layout(graph_t &graph) {
   // find_root_node(graph);
   std::vector<int> assignment = layer_assignment(graph);
@@ -133,24 +175,37 @@ std::unordered_map<int, std::vector<int>> compute_layout(graph_t &graph) {
   }
   int root = find_root_node(graph);
   insert_invisible_nodes(graph, map, assignment);
-  for (int layer = 1; layer < map.size(); layer++) {
+  // reoder vertex of each layer minimizing crossing
+  for (int layer = 1; layer <= map.size(); layer++) {
     std::vector<int>& layer_nodes = map.at(layer);
     std::sort(layer_nodes.begin(), layer_nodes.end());
-    auto minVec = layer_nodes;
-    int minValue = compute_crossing_edges(layer, map, graph);
-    while (std::next_permutation(layer_nodes.begin(), layer_nodes.end())) {
-      int currValue = compute_crossing_edges(layer, map, graph);
-      if (currValue < minValue) {
-        minValue = currValue;
-        minVec = layer_nodes;
-      }
-    }
-    map[layer] = minVec;
-    // std::cout << "layer: " << layer
-    //           << ", crossing edges: " << compute_crossing_edges(layer, map, graph)
-    //           << std::endl;
-
   }
+
+  combinatorics(1, map, graph);
+  return best_map;
+  // for (int layer = 2; layer < map.size(); layer++) {
+  //   std::cout << "layer: " << layer << std::endl;
+  //   std::vector<int>& layer_nodes = map.at(layer);
+  //   std::sort(layer_nodes.begin(), layer_nodes.end());
+  //   auto minVec = layer_nodes;
+  //   int prev = layer -1;
+  //   if (layer == map.size())
+  //     prev = layer;
+  //   int minValue = compute_crossing_edges(layer, map, graph) + compute_crossing_edges(prev, map, graph);
+  //   while (std::next_permutation(layer_nodes.begin(), layer_nodes.end())) {
+  //     int currValue = compute_crossing_edges(layer, map, graph) + compute_crossing_edges(prev, map, graph);
+  //     if (currValue < minValue) {
+  //       minValue = currValue;
+  //       minVec = layer_nodes;
+  //     }
+  //   }
+
+  //   map[layer] = minVec;
+  //   // std::cout << "layer: " << layer
+  //   //           << ", crossing edges: " << compute_crossing_edges(layer, map, graph)
+  //   //           << std::endl;
+
+  // }
   return map;
 }
 
@@ -181,5 +236,13 @@ int compute_crossing_edges(int layer,
       }
     }
   }
+  return count;
+}
+
+int compute_crossing_edges_in_all_graph(
+                           std::unordered_map<int, std::vector<int>> layers, graph_t graph) {
+  int count = 0;
+  for (int layer = 1; layer < layers.size(); layer++)
+    count += compute_crossing_edges(layer, layers, graph);
   return count;
 }
