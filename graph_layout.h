@@ -26,8 +26,18 @@ typedef struct graph_t {
 } graph_t;
 
 std::unordered_map<int, std::vector<int>> compute_layout(graph_t& graph);
-void print_vec(std::vector<int>& vec);
 
+// template<typename T>
+// void print_vec(std::vector<T> &vec);
+
+#include <iostream>
+template<typename T>
+void print_vec(std::vector<T> &vec) {
+  for (const auto &element : vec) {
+    std::cout << element << " ";
+  }
+  std::cout << std::endl;
+}
 
 
 #endif // GRAPH_LAYOUT_H_

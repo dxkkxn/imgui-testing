@@ -68,12 +68,6 @@ std::vector<int> layer_assignment(graph_t graph) {
   return assignment;
 }
 
-void print_vec(std::vector<int> &vec) {
-  for (const auto &element : vec) {
-    std::cout << element << " ";
-  }
-  std::cout << std::endl;
-}
 
 void insert_invisible_nodes(graph_t &graph,
                             std::unordered_map<int, std::vector<int>> &layer,
@@ -108,9 +102,7 @@ void insert_invisible_nodes(graph_t &graph,
         std::cout << "added node" << std::endl;
       }
     }
-    print_vec(graph.nodes.at(current));
     graph.nodes.at(current) = new_succesors;
-    print_vec(graph.nodes.at(current));
     deque.insert(deque.end(), new_succesors.begin(), new_succesors.end());
   }
   std::cout << "end func" << std::endl;
@@ -133,11 +125,11 @@ std::unordered_map<int, std::vector<int>> best_map;
 void combinatorics(int layer, std::unordered_map<int, std::vector<int>> map,
                    graph_t graph) {
   std::cout << "layer:" << layer << std::endl;
+  if (min == 1)
+    return;
   if (layer > map.size()) {
     int crossing_edges = compute_crossing_edges_in_all_graph(map, graph);
-    // std::cout << "ce: " << crossing_edges << std::endl;
-    // std::cout << "min: " << min << std::endl;
-    if (min > crossing_edges) {
+    if (min > crossing_edges || min == -1) {
       min = crossing_edges;
       best_map.clear();
       for (const auto &pair : map) {
@@ -150,7 +142,6 @@ void combinatorics(int layer, std::unordered_map<int, std::vector<int>> map,
 
         // Add the copy to the copy map
         best_map[key] = copyVector;
-        std::cout << "oooook" << std::endl;
       }
     }
     return;
@@ -165,8 +156,54 @@ void combinatorics(int layer, std::unordered_map<int, std::vector<int>> map,
     }
   }
 }
+float median(const std::vector<int>& vec) {
+  int n = vec.size();
+  if (n % 2 == 0)
+    return (float)(vec[n/2 -1] + vec[n/2]) / 2;
+  return vec[n/2];
+}
+void median_heuristic(int layer, std::unordered_map<int, std::vector<int>>& map,
+                   graph_t graph) {
+  auto exists_edge = [&graph](int src, int dest) {
+    auto it = find(graph.nodes.at(src).begin(), graph.nodes.at(src).end(), dest);
+    if (it == graph.nodes.at(src).end())
+      return false;
+    return true; // Edge exist
+  };
+
+  for (int layer = 2; layer < map.size(); layer++) {
+    std::vector<std::pair<int, float>> median_positions;
+    // for each node prev neighbour compute the median pisitions;
+    for (int node: map.at(layer)) {
+      std::vector<int> prev_neigh = map.at(layer-1);
+      std::vector<int> positions;
+      for (int i = 0; i < prev_neigh.size(); i++) {
+        if (exists_edge(prev_neigh[i], node))
+          positions.push_back(i);
+      }
+      median_positions.push_back(std::make_pair(node, median(positions)));
+    }
+    std::sort(
+        median_positions.begin(), median_positions.end(),
+        [](const auto &pair1, const auto &pair2) {
+          return pair1.second <
+                 pair2.second; // Sort based on the second element of each pair
+        });
+    map.at(layer).clear();
+    // map.at(layer).shrink_to_fit();
+    for (const auto &pair: median_positions) {
+      map.at(layer).push_back(pair.first);
+    }
+  }
+}
 
 std::unordered_map<int, std::vector<int>> compute_layout(graph_t &graph) {
+  auto exists_edge = [&graph](int src, int dest) {
+    auto it = find(graph.nodes.at(src).begin(), graph.nodes.at(src).end(), dest);
+    if (it == graph.nodes.at(src).end())
+      return false;
+    return true; // Edge exist
+  };
   // find_root_node(graph);
   std::vector<int> assignment = layer_assignment(graph);
   std::unordered_map<int, std::vector<int>> map;
@@ -176,13 +213,50 @@ std::unordered_map<int, std::vector<int>> compute_layout(graph_t &graph) {
   int root = find_root_node(graph);
   insert_invisible_nodes(graph, map, assignment);
   // reoder vertex of each layer minimizing crossing
-  for (int layer = 1; layer <= map.size(); layer++) {
-    std::vector<int>& layer_nodes = map.at(layer);
-    std::sort(layer_nodes.begin(), layer_nodes.end());
+  // for (int layer = 1; layer <= map.size(); layer++) {
+  //   std::vector<int>& layer_nodes = map.at(layer);
+  //   std::sort(layer_nodes.begin(), layer_nodes.end());
+  // }
+  //
+  median_heuristic(1, map, graph);
+  for (int k = 0; k < 23; k++) {
+    for (int layer = 1; layer <= map.size(); layer++) {
+      std::vector<int> &nodes = map.at(layer);
+      if (k % 2) {
+        for (int i = 0; i < nodes.size() - 1; i++) {
+          int crossing_edges = compute_crossing_edges_in_all_graph(map, graph);
+          std::swap(nodes[i], nodes[i + 1]);
+          int new_crossing_edges =
+              compute_crossing_edges_in_all_graph(map, graph);
+          if (new_crossing_edges > crossing_edges)
+            std::swap(nodes[i], nodes[i + 1]);
+        }
+      } else {
+        for (int i = nodes.size() - 1; i > 0; i--) {
+          int crossing_edges = compute_crossing_edges_in_all_graph(map, graph);
+          std::swap(nodes[i - 1], nodes[i]);
+          int new_crossing_edges =
+              compute_crossing_edges_in_all_graph(map, graph);
+          if (new_crossing_edges >= crossing_edges)
+            std::swap(nodes[i-1], nodes[i]);
+        }
+      }
+    }
   }
+  return map;
+  // for (int i = 0; i < 24; i++) {
+  //   transpose(map, graph);
+  //   this.median(layers, edges, i);
 
-  combinatorics(1, map, graph);
-  return best_map;
+  //   this.transpose(
+  //       layers,
+  //       edges) if (this.crossing(layers, edges) > this.crossing(best, edges)) {
+  //     best = this.copy(layers)
+  //   }
+  // }
+  // combinatorics(1, map, graph);
+  // return best_map;
+
   // for (int layer = 2; layer < map.size(); layer++) {
   //   std::cout << "layer: " << layer << std::endl;
   //   std::vector<int>& layer_nodes = map.at(layer);

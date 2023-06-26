@@ -60,6 +60,71 @@ typedef struct Mesh {
 
 // ImGui::Begin("Custom Tree Node");
 
+typedef unsigned long long ctime_t;
+struct TaskExecInfo
+{
+    using TimeInterval = std::pair<ctime_t,ctime_t>;
+    // using Color = ;
+
+    int          execThreadIndex;
+    TimeInterval execTime;
+    ImVec4 color;
+    std::string  name;
+
+    inline int getExecThreadIndex() const { return execThreadIndex; }
+    inline const TimeInterval& getExecTime() const { return execTime; }
+    inline ctime_t getExecDuration() const { return execTime.second - execTime.first; }
+    // inline const Color& getColor() const { return color; }
+    inline const std::string& getName() const { return name; }
+};
+std::array<std::vector<TaskExecInfo>, 8> thread_pool;
+
+std::string generateLoremIpsum(int numWords) {
+  std::vector<std::string> words = {
+      "Lorem",       "ipsum",      "dolor",      "sit",   "amet",
+      "consectetur", "adipiscing", "elit",       "sed",   "do",
+      "eiusmod",     "tempor",     "incididunt", "ut",    "labore",
+      "et",          "dolore",     "magna",      "aliqua"};
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dis(0, words.size() - 1);
+
+  std::stringstream ss;
+  for (int i = 0; i < numWords; ++i) {
+    if (i > 0)
+      ss << ' ';
+    ss << words[dis(gen)];
+  }
+
+  return ss.str();
+}
+void init_thread_pool() {
+  for (int i = 0; i < thread_pool.size(); i++) {
+    auto& thread = thread_pool[i];
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    // Define the range of random numbers
+    std::uniform_int_distribution<int> dis(1, 5);
+    int random = dis(gen);
+    // thread.resize(random);
+    int last = 0;
+    for(int j = 0; j < random; j++) {
+      std::uniform_int_distribution<int> dis(1, 100000);
+      std::uniform_real_distribution<float> float_dis(0.0, 1.0);
+      int sleep_time = dis(gen); // sleep time between the last taks and the current one
+      int duration = dis(gen); // duration of the task;
+      ImVec4 random_vec = ImVec4(float_dis(gen), float_dis(gen), float_dis(gen), 1);
+      TaskExecInfo task = {i, {last + sleep_time, last+sleep_time+duration}, random_vec, generateLoremIpsum(4)};
+      thread.emplace_back(task);
+      last = last+sleep_time+duration;
+    }
+  }
+
+  // for (auto task: thread_pool[0]) {
+  //   std::cout << ">>>task name: " << task.name << std::endl;
+  // }
+}
 bool MyTreeNode(const char *label) {
   const ImGuiStyle &style = ImGui::GetStyle();
   ImGuiStorage *storage = ImGui::GetStateStorage();
@@ -164,26 +229,6 @@ graph_t example_wiki_graph() {
   return new_graph;
 }
 
-std::string generateLoremIpsum(int numWords) {
-  std::vector<std::string> words = {
-      "Lorem",       "ipsum",      "dolor",      "sit",   "amet",
-      "consectetur", "adipiscing", "elit",       "sed",   "do",
-      "eiusmod",     "tempor",     "incididunt", "ut",    "labore",
-      "et",          "dolore",     "magna",      "aliqua"};
-
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_int_distribution<> dis(0, words.size() - 1);
-
-  std::stringstream ss;
-  for (int i = 0; i < numWords; ++i) {
-    if (i > 0)
-      ss << ' ';
-    ss << words[dis(gen)];
-  }
-
-  return ss.str();
-}
 
 Mesh *create_random_mesh(const char *s, int nb_points) {
   Mesh *m = new Mesh;
@@ -529,56 +574,155 @@ void my_window(Mesh **meshes, int len) {
   ImGui::SetNextWindowSize(ImVec2(size_x - WINDOW_SIZE, WINDOW_SIZE));
   if (ImGui::Begin("bottom", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
 
-    static float xs1[1001], ys1[1001];
-    static float g[1001];
-    for (int i = 0; i < 1001; ++i) {
-      xs1[i] = i * 0.01f;
-      ys1[i] = sinf(xs1[i] + (float)ImGui::GetTime());
-      g[i] = exp(-pow(fmod(xs1[i] + (float)ImGui::GetTime(), 10) - 4, 2));
-      // g[i] = exp(xs1[i]);
-      // std::cout << exp(i) << " " << i << std::endl;
+    static ImPlotColormap colormap= -1;
+    static std::vector<ctime_t> values;
+    static std::vector<std::string> labels_graph;
+    int n = thread_pool.size();
+    if (colormap == -1) {
+      std::vector<ImVec4> colors = { ImVec4(1, 0, 0, 1)}; // inf line color
+      for (int i = 0; i < n; i++) {
+        const std::vector<TaskExecInfo> &tasks = thread_pool[i];
+        ctime_t last = 0;
+        for (const auto &task : tasks) {
+          std::cout << "first: " << task.execTime.first << std::endl;
+          std::cout << "second: " << task.execTime.second << std::endl;
+          values.insert(values.end(), i, 0);
+          values.push_back(task.execTime.first - last);
+          values.insert(values.end(), n - i - 1, 0);
+
+          values.insert(values.end(), i, 0);
+          values.push_back(task.execTime.second - task.execTime.first);
+          values.insert(values.end(), n - i - 1, 0);
+
+          last = task.execTime.second;
+          colors.push_back(ImVec4(0, 0, 0, 0));
+          colors.push_back(task.color);
+          labels_graph.push_back("###" + task.name + "_sleep_before");
+          labels_graph.push_back(task.name);
+          std::cout << "task: > " << task.name.c_str() << std::endl;
+        }
+      }
+      colormap = ImPlot::AddColormap("scheduler", colors.data(), colors.size());
     }
-    memmove(random_points, random_points + 1, sizeof(int) * 1000);
+    print_vec(values);
+    std::cout << "values size: "<< values.size() << " labels size: " << labels_graph.size() << std::endl;
+    ImPlot::PushColormap(colormap);
+    if (ImPlot::BeginPlot("Scheduler", ImVec2(1920 - WINDOW_SIZE - 100, 300), ImPlotFlags_CanvasOnly)) {
+      std::vector<std::string> thread_labels_strings;
+      for (int i = 0; i < thread_pool.size(); i++) {
+        std::string label = "Thread " + std::to_string(i);
+        thread_labels_strings.push_back(label);
+      }
+      std::vector<const char *> thread_labels;
+      for (auto &ref :thread_labels_strings) {
+        thread_labels.push_back(ref.c_str());
+        std::cout << ref.c_str() << std::endl;;
+      }
+      std::cout << " n: " << n << " size: " << thread_labels.size() << std::endl;
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    // Define the range of random numbers
-    std::uniform_real_distribution<float> distribution(1, 100);
-    random_points[1000] = distribution(gen);
+      ImPlot::SetupAxes("ms",nullptr,ImPlotAxisFlags_LockMin, 0);
+      ImPlot::SetupAxisTicks(ImAxis_Y1,0,n-1,n,thread_labels.data(),false);
 
-    ImGui::PlotLines("##teeest", ys1, IM_ARRAYSIZE(ys1), 0, "forces");
-    ImGui::SameLine();
-    ImGui::PlotLines("##values_getter_test", vg, xs1, IM_ARRAYSIZE(xs1), 0,
-                     "teeest");
+      int  val[] = {200000};
+      // static double vals[] = {0.25, 0.5, 0.75};
+      ImPlot::PlotInfLines("20ms", val, 1);
+      static std::vector<const char *> labels;
+      for (auto &ref : labels_graph) {
+        labels.push_back(ref.c_str());
+      }
+      ImPlot::PlotBarGroups(
+          labels.data(), values.data(), values.size()/n, n, 0.67, 0,
+          ImPlotBarGroupsFlags_Stacked | ImPlotBarGroupsFlags_Horizontal);
+      auto mouse_pos = ImPlot::GetPlotMousePos();
 
-    if (ImPlot::BeginPlot("Force x", ImVec2(500, 200))) {
-      ImPlot::SetupAxes("time", "force");
-      ImPlot::PlotLine("##f(x)", xs1, ys1, 1001);
-      ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle);
+      for (int i = 0; i < thread_pool.size(); i++) {
+        for (const auto &task : thread_pool[i]) {
+          ctime_t bar_start = task.execTime.first;
+          ctime_t bar_end = task.execTime.second;
+          if (ImPlot::IsPlotHovered() && i+-0.335 < mouse_pos.y &&
+              mouse_pos.y < i+0.335 && bar_start < mouse_pos.x &&
+              mouse_pos.x < bar_end && ImGui::BeginTooltip()) {
+            ImGui::Text("Thread %d", task.execThreadIndex);
+            ImGui::Text("%s", task.name.c_str());
+            ImGui::Text("start time: %llull ms", task.execTime.first);
+            ImGui::Text("end time: %llull ms", task.execTime.second);
+            ImGui::EndTooltip();
+          }
+        }
+      }
+
+      // Data arrays for the bars
+      // static double data_prev[] = {1, 2, 3, 4};    // Previous bars
+      // static double data_stacked[] = {5, 6, 7, 8}; // Stacked bars
+
+      // // Plotting the previous bars
+      // ImPlot::PlotBars("Previous", data_prev, 4, 0.2f);
+
+      // // Creating a space (empty bars)
+      // static double empty_data[] = {0, 0, 0, 0}; // Empty bars data
+      // ImPlot::PlotBars("", empty_data, 4, 0.2f);
+
+      // // Plotting the stacked bars
+      // ImPlot::PlotBars("Stacked", data_stacked, 4, 0.2f);
+
+      // Plot the second set of bars on top of the first set
+      // ImPlot::PushStyleColor(ImPlotCol_Line, ImVec4(0, 0, 0, 0));
+      // ImPlot::PlotBars("labels", values2, 3, 0.4, 1, ImPlotBarsFlags_Horizontal);
+      // ImPlot::PopStyleColor();
+
       ImPlot::EndPlot();
     }
-    ImGui::SameLine();
+    ImPlot::PopColormap();
+      static float xs1[1001], ys1[1001];
+      static float g[1001];
+      for (int i = 0; i < 1001; ++i) {
+        xs1[i] = i * 0.01f;
+        ys1[i] = sinf(xs1[i] + (float)ImGui::GetTime());
+        g[i] = exp(-pow(fmod(xs1[i] + (float)ImGui::GetTime(), 10) - 4, 2));
+        // g[i] = exp(xs1[i]);
+        // std::cout << exp(i) << " " << i << std::endl;
+      }
+      memmove(random_points, random_points + 1, sizeof(int) * 1000);
 
-    if (ImPlot::BeginPlot("Force y", ImVec2(500, 200))) {
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      // Define the range of random numbers
+      std::uniform_real_distribution<float> distribution(1, 100);
+      random_points[1000] = distribution(gen);
 
-      ImPlot::SetupAxes("x", "y");
+      ImGui::PlotLines("##teeest", ys1, IM_ARRAYSIZE(ys1), 0, "forces");
+      ImGui::SameLine();
+      ImGui::PlotLines("##values_getter_test", vg, xs1, IM_ARRAYSIZE(xs1), 0,
+                       "teeest");
 
-      // ImPlot::PlotLineG("##f(x)", ImPlotGetter getter, void* data, int count,
-      // ImPlotLineFlags flags=0);
-      ImPlot::PlotLine("##f(x)", random_points, 1001);
-      ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle);
-      ImPlot::EndPlot();
+      if (ImPlot::BeginPlot("Force x", ImVec2(500, 200))) {
+        ImPlot::SetupAxes("time", "force");
+        ImPlot::PlotLine("##f(x)", xs1, ys1, 1001);
+        ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle);
+        ImPlot::EndPlot();
+      }
+      ImGui::SameLine();
+
+      if (ImPlot::BeginPlot("Force y", ImVec2(500, 200))) {
+
+        ImPlot::SetupAxes("x", "y");
+
+        // ImPlot::PlotLineG("##f(x)", ImPlotGetter getter, void* data, int
+        // count, ImPlotLineFlags flags=0);
+        ImPlot::PlotLine("##f(x)", random_points, 1001);
+        ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle);
+        ImPlot::EndPlot();
+      }
+      ImGui::SameLine();
+      if (ImPlot::BeginPlot("Force z", ImVec2(500, 200))) {
+        ImPlot::SetupAxes("x", "y");
+        ImPlot::PlotLine("##f(x)", xs1, g, 1001);
+        ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle);
+        ImPlot::EndPlot();
+      }
+
+      ImGui::End();
     }
-    ImGui::SameLine();
-    if (ImPlot::BeginPlot("Force z", ImVec2(500, 200))) {
-      ImPlot::SetupAxes("x", "y");
-      ImPlot::PlotLine("##f(x)", xs1, g, 1001);
-      ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle);
-      ImPlot::EndPlot();
-    }
-
-    ImGui::End();
-  }
 }
 
 
@@ -689,8 +833,8 @@ void node_editor(graph_t& graph) {
       int node = i;
       ed::BeginNode(uniqueId++);
       if (graph.isInvisible(node)) {
-        ed::SetInvisible(uniqueId-1);
-        // ImGui::Text("im invisible");
+        // ed::SetInvisible(uniqueId-1);
+        ImGui::Text("im invisible");
         // ImGui::Text("-> In");
         ed::BeginPin(uniqueId++, ed::PinKind::Input);
         ed::EndPin();
@@ -752,6 +896,8 @@ void node_editor(graph_t& graph) {
   }
 }
 
+
+
 // Main code
 int main(int, char **) {
   // create some random meshes
@@ -760,6 +906,7 @@ int main(int, char **) {
     meshes[i] = create_random_mesh("Mesh", 5);
   }
   fill_random_points_arr();
+  init_thread_pool();
   // int n= 5;
   // std::cout << "Mesh" + std::string(n) ;
 
